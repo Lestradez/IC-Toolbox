@@ -6,7 +6,7 @@
 // index.html ni sw.js.
 
 /** Orden en que se muestran las categorías en el inicio. */
-export const CATEGORIES = ['Conversiones', 'Señales', 'Caudal', 'Fluidos', 'Referencias'];
+export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Caudal', 'Fluidos', 'Referencias'];
 
 /**
  * @typedef {object} Tool
@@ -35,6 +35,14 @@ export const TOOLS = [
     category: 'Señales',
     keywords: 'escalado escalar 4-20 0-10v 1-5v 3-15psi neumática tensión volt pf capacidad corriente ma porcentaje lrv urv rango calibración raíz cuadrada namur ne43 transmisor lazo',
     load: () => import('./signal/view.js'),
+  },
+  {
+    id: 'temperature',
+    title: 'RTD y termopares',
+    desc: 'Pt100/Pt1000, Ni120 y termopares J K T E N R S B: °C ↔ Ω / mV, junta fría',
+    category: 'Sensores',
+    keywords: 'temperatura rtd pt100 pt500 pt1000 ni100 ni1000 ni120 níquel platino iec 60751 callendar van dusen ohm resistencia termopar termocupla thermocouple tc mv milivoltios its-90 iec 60584 junta fría compensación cjc 2 hilos cables calibración',
+    load: () => import('./temperature/view.js'),
   },
   {
     id: 'orifice',
