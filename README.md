@@ -21,10 +21,11 @@ y escritorio y funciona sin conexión.
 
 ## Flujo de trabajo
 
-- `dev`: desarrollo. Todo cambio entra aquí.
-- `main`: producción. Solo se actualiza mediante PR desde `dev`.
-  Cada push a `main` ejecuta los tests y despliega en GitHub Pages
+- Cada cambio se hace en una rama propia y entra a `main` mediante PR.
+  El PR ejecuta los tests (`.github/workflows/ci.yml`, check `test`).
+- `main`: producción. Cada push a `main` ejecuta los tests y despliega en GitHub Pages
   (`.github/workflows/pages.yml`).
+- Si hace falta probar algo antes de ir a `main`, se crea una rama temporal y se borra después.
 
 ## Desarrollo local
 
