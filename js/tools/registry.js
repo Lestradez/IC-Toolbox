@@ -69,6 +69,14 @@ export const TOOLS = [
     load: () => import('./pid/view.js'),
   },
   {
+    id: 'densities',
+    title: 'Densidades de fluidos',
+    desc: 'Agua, glicoles, petróleo (°API), gases y vapor: densidad y viscosidad según la temperatura',
+    category: 'Fluidos',
+    keywords: 'densidad peso específico sg gravedad específica relativa api grados crudo petróleo gasolina diésel gasóleo jet queroseno fuel oil agua etanol metanol acetona benceno tolueno hexano glicol etilenglicol propilenglicol anticongelante mercurio propano butano glp amoníaco co2 aire nitrógeno oxígeno hidrógeno helio argón metano etano gas natural vapor saturado viscosidad cinemática dinámica cp cst masa molar compresibilidad z peng robinson dilatación temperatura tabla fluido',
+    load: () => import('./densities/view.js'),
+  },
+  {
     id: 'orifice',
     title: 'Placa orificio',
     desc: 'ISO 5167-2: caudal, dimensionamiento de d y caudal desde rango',
