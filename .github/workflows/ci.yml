@@ -13,4 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
+          cache: npm
+      - name: Tests de cálculo y de publicación
+        run: npm test
+      - run: npm ci
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test de humo (móvil, offline, actualización)
+        run: npm run test:e2e

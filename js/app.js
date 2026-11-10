@@ -4,8 +4,9 @@ import {
 import { parseNum, fmt, $ } from './ui.js';
 import { initOrifice } from './orifice-view.js';
 
-export const APP_VERSION = '0.2.0';
-document.getElementById('version').textContent = APP_VERSION;
+// scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
+export const APP_VERSION = '__APP_VERSION__';
+document.getElementById('version').textContent = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
 
 // ---------------------------------------------------------------------------
 // Router por hash
@@ -153,8 +154,43 @@ window.addEventListener('online', updateNet);
 window.addEventListener('offline', updateNet);
 updateNet();
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW no registrado', e));
+// La versión nueva se instala en segundo plano y espera. Se avisa al usuario y se
+// activa cuando pulsa «Actualizar», para no cambiar la app mientras está midiendo.
+function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  const sw = navigator.serviceWorker;
+  let userAccepted = false;
+
+  function offer(worker) {
+    if (!sw.controller) return; // primera instalación: no hay nada que actualizar
+    $('update').hidden = false;
+    $('update-btn').onclick = () => {
+      userAccepted = true;
+      worker.postMessage('SKIP_WAITING');
+    };
+  }
+
+  sw.addEventListener('controllerchange', () => {
+    if (userAccepted) location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    let reg;
+    try {
+      reg = await sw.register('sw.js');
+    } catch (e) {
+      console.warn('SW no registrado', e);
+      return;
+    }
+    if (reg.waiting) offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w?.addEventListener('statechange', () => { if (w.state === 'installed') offer(w); });
+    });
+    // En Android la app puede pasar días abierta en segundo plano: al volver, busca versión nueva.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) reg.update().catch(() => {});
+    });
   });
 }
+initServiceWorker();
