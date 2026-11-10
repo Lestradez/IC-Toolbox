@@ -263,21 +263,43 @@ test('RTD y termopares: valores de tabla en los dos sentidos', async () => {
   await context.close();
 });
 
-test('«Reportar un problema» lleva la herramienta y la versión; sin código no hay envíos', async () => {
+test('«Reportar un problema»: sin formulario abre GitHub con herramienta y versión', async () => {
   const { context, page, errors } = await newPage();
-  const requests = [];
-  page.on('request', (r) => { if (r.url().includes('goatcounter')) requests.push(r.url()); });
   await page.goto(base + '#/orifice');
   await visibleView(page, 'orifice');
-  const url = new URL(await page.getAttribute('#report', 'href'));
+  await page.evaluate(() => { window.open = (u) => { window.__opened = u; }; });
+  await page.click('#report');
+  const url = new URL(await page.evaluate(() => window.__opened));
   assert.equal(url.pathname, '/Lestradez/IC-Toolbox/issues/new');
   assert.equal(url.searchParams.get('title'), '[Placa orificio] ');
   assert.match(url.searchParams.get('body'), /Herramienta: Placa orificio \(#\/orifice\)/);
   assert.match(url.searchParams.get('body'), /Versión: /);
-  await page.goto(base + '#/');
-  assert.match(new URL(await page.getAttribute('#report', 'href')).searchParams.get('title'), /Inicio/);
-  assert.deepEqual(requests.filter((u) => !u.includes('lestradez.goatcounter.com')), []);
-  assert.equal(await page.isHidden('#stats-row'), true, 'sin código GoatCounter no se ofrece el interruptor');
+  assert.equal(await page.isHidden('#report-dialog'), true);
+  assert.equal(await page.isHidden('#stats-row'), true, 'en localhost no se ofrece el interruptor');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('«Reportar un problema»: con formulario muestra el popup con las dos opciones', async () => {
+  const { context, page, errors } = await newPage();
+  await page.route('**/js/config.js', async (route) => {
+    const res = await route.fetch();
+    const body = (await res.text())
+      .replace("FORM_URL = ''", "FORM_URL = 'https://docs.google.com/forms/d/e/X/viewform'")
+      .replace("{ tool: '', version: '', browser: '' }", "{ tool: 'entry.1', version: 'entry.2', browser: '' }");
+    await route.fulfill({ response: res, body });
+  });
+  await page.goto(base + '#/signal');
+  await visibleView(page, 'signal');
+  await page.click('#report');
+  await page.waitForSelector('#report-dialog[open]');
+  assert.equal(await page.isVisible('#report-github'), true);
+  const form = new URL(await page.getAttribute('#report-form', 'href'));
+  assert.equal(form.searchParams.get('entry.1'), 'Escalado de señales');
+  assert.match(form.searchParams.get('entry.2'), /\S/);
+  assert.match(await page.getAttribute('#report-github', 'href'), /github\.com\/Lestradez\/IC-Toolbox\/issues\/new/);
+  await page.click('#report-close');
+  assert.equal(await page.isHidden('#report-dialog'), true);
   assert.deepEqual(errors, []);
   await context.close();
 });

@@ -9,3 +9,12 @@ export const REPO = 'Lestradez/IC-Toolbox';
  * página que use GoatCounter), no es un secreto.
  */
 export const GOATCOUNTER_CODE = 'lestradez';
+
+/**
+ * Formulario alternativo para quien no tiene cuenta de GitHub (Google Forms).
+ * FORM_URL: enlace «viewform» del formulario. Vacío = el botón Reportar abre GitHub directo.
+ * FORM_FIELDS: ids `entry.NNNN` de los campos a prellenar (se sacan con «Obtener enlace
+ * prellenado»). Los que queden vacíos no se rellenan.
+ */
+export const FORM_URL = '';
+export const FORM_FIELDS = { tool: '', version: '', browser: '' };

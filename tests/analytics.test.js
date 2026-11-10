@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { beaconUrl, describeError, enqueue, createAnalytics } from '../js/analytics.js';
-import { reportUrl } from '../js/report.js';
+import { reportUrl, formUrl } from '../js/report.js';
 
 // ui.js usa localStorage: un doble en memoria.
 const store = new Map();
@@ -107,4 +107,14 @@ test('reportUrl: issue prellenado con herramienta y versión', () => {
   assert.match(body, /Conexión: sin conexión/);
   assert.match(body, /Navegador: UA\/1/);
   assert.match(reportUrl({ repo: 'a/b', tool: '', toolTitle: '', version: 'dev' }), /Inicio/);
+});
+
+test('formUrl: prellena solo los campos configurados; vacío sin formulario', () => {
+  const base = { tool: 'units', toolTitle: 'Conversor de unidades', version: '0.3.0', userAgent: 'UA' };
+  assert.equal(formUrl({ url: '', fields: {}, ...base }), '');
+  const u = new URL(formUrl({ url: 'https://docs.google.com/forms/d/e/X/viewform', fields: { tool: 'entry.1', version: 'entry.2', browser: '' }, ...base }));
+  assert.equal(u.searchParams.get('usp'), 'pp_url');
+  assert.equal(u.searchParams.get('entry.1'), 'Conversor de unidades');
+  assert.equal(u.searchParams.get('entry.2'), '0.3.0');
+  assert.equal([...u.searchParams.keys()].length, 3);
 });

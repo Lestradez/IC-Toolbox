@@ -2,9 +2,9 @@
 // Cada herramienta se carga (import dinámico) la primera vez que se abre.
 import { $, loadState, saveState } from './ui.js';
 import { TOOLS, CATEGORIES, toolById, searchTools } from './tools/registry.js';
-import { REPO, GOATCOUNTER_CODE } from './config.js';
+import { REPO, GOATCOUNTER_CODE, FORM_URL, FORM_FIELDS } from './config.js';
 import { createAnalytics, watchErrors } from './analytics.js';
-import { reportUrl } from './report.js';
+import { reportUrl, formUrl } from './report.js';
 
 // scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
 export const APP_VERSION = '__APP_VERSION__';
@@ -29,16 +29,25 @@ if (published && GOATCOUNTER_CODE) {
   $('stats').addEventListener('change', () => saveState('analytics', $('stats').checked));
 }
 
-function updateReportLink(tool) {
-  $('report').href = reportUrl({
-    repo: REPO, tool: tool ? tool.id : '', toolTitle: tool ? tool.title : '',
-    version: VERSION_TEXT, userAgent: navigator.userAgent, online: navigator.onLine,
-  });
-}
-$('report').addEventListener('click', () => {
-  updateReportLink(toolById(current));
+function openReport() {
+  const tool = toolById(current);
+  const info = {
+    tool: tool ? tool.id : '', toolTitle: tool ? tool.title : '',
+    version: VERSION_TEXT, userAgent: navigator.userAgent,
+  };
+  const github = reportUrl({ repo: REPO, ...info, online: navigator.onLine });
+  const form = formUrl({ url: FORM_URL, fields: FORM_FIELDS, ...info });
   analytics.event(`report/${current || 'home'}`);
-});
+  if (!form) { window.open(github, '_blank', 'noopener'); return; }
+  $('report-github').href = github;
+  $('report-form').href = form;
+  $('report-form').hidden = false;
+  $('report-dialog').showModal();
+}
+$('report').addEventListener('click', openReport);
+$('report-close').addEventListener('click', () => $('report-dialog').close());
+$('report-dialog').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+for (const id of ['report-github', 'report-form']) $(id).addEventListener('click', () => $('report-dialog').close());
 
 // ---------------------------------------------------------------------------
 // Inicio: buscador, recientes y categorías
@@ -145,7 +154,6 @@ async function route() {
   $('back').hidden = !tool;
   $('brand').hidden = !!tool;
   $('title').hidden = !tool;
-  updateReportLink(tool);
   analytics.pageview(tool ? `/${tool.id}` : '/', tool ? tool.title : 'Inicio');
 
   if (!tool) {

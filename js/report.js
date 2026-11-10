@@ -33,3 +33,14 @@ export function reportUrl({ repo, tool, toolTitle, version, userAgent = '', onli
   const q = new URLSearchParams({ title: `[${where}] `, body });
   return `https://github.com/${repo}/issues/new?${q}`;
 }
+
+/** Enlace al formulario con herramienta, versión y navegador prellenados. '' si no hay formulario. */
+export function formUrl({ url, fields, tool, toolTitle, version, userAgent = '' }) {
+  if (!url) return '';
+  const q = new URLSearchParams({ usp: 'pp_url' });
+  if (fields.tool) q.set(fields.tool, toolTitle || 'Inicio');
+  if (fields.version) q.set(fields.version, version);
+  if (fields.browser && userAgent) q.set(fields.browser, userAgent);
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}${q}`;
+}
