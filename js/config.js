@@ -16,5 +16,5 @@ export const GOATCOUNTER_CODE = 'lestradez';
  * FORM_FIELDS: ids `entry.NNNN` de los campos a prellenar (se sacan con «Obtener enlace
  * prellenado»). Los que queden vacíos no se rellenan.
  */
-export const FORM_URL = '';
-export const FORM_FIELDS = { tool: '', version: '', browser: '' };
+export const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf5VAWQlj31bij0Qoj7fx8VfhmMDI7qCWTH23RcQETtzD8mfA/viewform';
+export const FORM_FIELDS = { tool: 'entry.156488016', version: 'entry.1456596696', browser: '' };

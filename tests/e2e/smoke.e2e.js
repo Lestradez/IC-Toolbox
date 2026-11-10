@@ -326,8 +326,20 @@ test('sintonía PID: siempre muestra P, I y D, y explica la D = 0', async () => 
   await context.close();
 });
 
+/** Sustituye js/config.js en la página para no depender de lo que haya publicado. */
+async function overrideConfig(page, { formUrl = '', fields = {} } = {}) {
+  await page.route('**/js/config.js', async (route) => {
+    const res = await route.fetch();
+    const body = (await res.text())
+      .replace(/FORM_URL = '[^']*'/, `FORM_URL = ${JSON.stringify(formUrl)}`)
+      .replace(/FORM_FIELDS = \{[^}]*\}/, `FORM_FIELDS = ${JSON.stringify(fields)}`);
+    await route.fulfill({ response: res, body });
+  });
+}
+
 test('«Reportar un problema»: sin formulario abre GitHub con herramienta y versión', async () => {
   const { context, page, errors } = await newPage();
+  await overrideConfig(page);
   await page.goto(base + '#/orifice');
   await visibleView(page, 'orifice');
   await page.evaluate(() => { window.open = (u) => { window.__opened = u; }; });
@@ -345,13 +357,7 @@ test('«Reportar un problema»: sin formulario abre GitHub con herramienta y ver
 
 test('«Reportar un problema»: con formulario muestra el popup con las dos opciones', async () => {
   const { context, page, errors } = await newPage();
-  await page.route('**/js/config.js', async (route) => {
-    const res = await route.fetch();
-    const body = (await res.text())
-      .replace("FORM_URL = ''", "FORM_URL = 'https://docs.google.com/forms/d/e/X/viewform'")
-      .replace("{ tool: '', version: '', browser: '' }", "{ tool: 'entry.1', version: 'entry.2', browser: '' }");
-    await route.fulfill({ response: res, body });
-  });
+  await overrideConfig(page, { formUrl: 'https://docs.google.com/forms/d/e/X/viewform', fields: { tool: 'entry.1', version: 'entry.2', browser: '' } });
   await page.goto(base + '#/signal');
   await visibleView(page, 'signal');
   await page.click('#report');
