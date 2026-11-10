@@ -1,6 +1,6 @@
 // Service worker: precarga todos los recursos y sirve cache-first para que la app
 // funcione sin conexión. Sube CACHE_VERSION en cada release para invalidar la caché.
-const CACHE_VERSION = 'ic-toolbox-v0.1.0';
+const CACHE_VERSION = 'ic-toolbox-v0.2.0';
 
 const PRECACHE = [
   './',
@@ -8,6 +8,10 @@ const PRECACHE = [
   './css/style.css',
   './js/app.js',
   './js/units.js',
+  './js/ui.js',
+  './js/orifice.js',
+  './js/orifice-view.js',
+  './js/pipes.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

@@ -12,7 +12,7 @@ y escritorio y funciona sin conexión.
 |---|---|
 | Conversor de unidades (presión, temperatura, caudal volumétrico y másico, nivel) | ✅ |
 | Señal 4-20 mA ↔ % ↔ valor de proceso, raíz cuadrada, NAMUR NE 43 | ✅ |
-| Placa orificio (ISO 5167) | Pendiente |
+| Placa orificio ISO 5167-2: caudal (líquido, crudo + agua, gas con ε), dimensionamiento de d, caudal desde rango | ✅ |
 | Tablas de densidades | Pendiente |
 
 > Las herramientas son de apoyo. Verifica los resultados críticos contra la norma
@@ -32,7 +32,9 @@ npm test          # tests de cálculo (node --test, sin dependencias)
 npm start         # sirve en http://localhost:8080
 ```
 
-Los cálculos viven en módulos puros (`js/units.js`) sin DOM, para poder testearlos.
+Los cálculos viven en módulos puros (`js/units.js`, `js/orifice.js`, `js/pipes.js`) sin DOM, para poder testearlos.
+Los casos de referencia de la placa orificio se generan con la librería independiente `fluids`
+(`scripts/orifice_reference.py`).
 Al publicar una versión, sube `CACHE_VERSION` en `sw.js` y `APP_VERSION` en `js/app.js`
 para que los móviles descarguen la nueva versión.
 
