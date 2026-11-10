@@ -14,6 +14,7 @@ y escritorio y funciona sin conexión.
 | Escalado de señales: 4-20 mA, 0-10 V, 3-15 psi… (presets) o cualquier magnitud/unidad ↔ %, raíz cuadrada, NAMUR NE 43 | ✅ |
 | Placa orificio ISO 5167-2: caudal (líquido, crudo + agua, gas con ε), dimensionamiento de d, caudal desde rango | ✅ |
 | RTD (Pt100/500/1000 IEC 60751, Ni100/Ni1000 DIN 43760, Ni120) y termopares J, K, T, E, N, R, S, B (ITS-90): °C ↔ Ω / mV, cables a 2 hilos, junta fría y puntos de calibración | ✅ |
+| Nivel por ΔP: LRV y URV con supresión o elevación de cero (tanque abierto/cerrado, pierna seca o húmeda, sellos remotos, transmisor por debajo de la toma), tabla de puntos con mA | ✅ |
 | Tablas de densidades | Pendiente |
 
 > Las herramientas son de apoyo. Verifica los resultados críticos contra la norma

@@ -6,7 +6,7 @@
 // index.html ni sw.js.
 
 /** Orden en que se muestran las categorías en el inicio. */
-export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Fluidos', 'Referencias'];
+export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Nivel', 'Fluidos', 'Referencias'];
 
 /**
  * @typedef {object} Tool
@@ -51,6 +51,14 @@ export const TOOLS = [
     category: 'Calibración',
     keywords: 'estadística desviación estándar típica sigma media promedio repetibilidad incertidumbre tipo a gum student error span lectura tolerancia cumple patrón calibrador error total probable tpe rss hoja de datos exactitud estabilidad url turndown efecto temperatura presión estática',
     load: () => import('./calibration/view.js'),
+  },
+  {
+    id: 'level',
+    title: 'Nivel por ΔP',
+    desc: 'LRV y URV con supresión o elevación de cero: pierna seca/húmeda, sellos remotos',
+    category: 'Nivel',
+    keywords: 'nivel transmisor presión diferencial dp delta p supresión elevación cero zero suppression elevation pierna húmeda seca wet dry leg capilar sello remoto diafragma relleno silicona tanque abierto cerrado lrv urv rango calibración densidad hidrostática altura montaje offset',
+    load: () => import('./level/view.js'),
   },
   {
     id: 'orifice',
