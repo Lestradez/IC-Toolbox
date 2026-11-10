@@ -26,3 +26,21 @@ export function fmtFixed(n, dec) {
 }
 
 export const $ = (id) => document.getElementById(id);
+
+const PREFIX = 'ict.';
+
+/** Lee el estado guardado de una herramienta (o null). Nunca lanza. */
+export function loadState(key) {
+  try {
+    return JSON.parse(localStorage.getItem(PREFIX + key) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+/** Guarda el estado de una herramienta. Si no hay almacenamiento, no hace nada. */
+export function saveState(key, value) {
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
+  } catch { /* almacenamiento lleno o bloqueado: la app funciona igual */ }
+}

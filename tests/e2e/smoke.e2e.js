@@ -55,7 +55,8 @@ async function waitForController(page) {
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 }
 
-async function visibleView(page) {
+async function visibleView(page, expected) {
+  if (expected) await page.waitForSelector(`[data-view="${expected}"]:not([hidden])`, { timeout: 5000 }).catch(() => {});
   return page.evaluate(() => [...document.querySelectorAll('[data-view]')].filter((el) => !el.hidden).map((el) => el.dataset.view));
 }
 
@@ -64,7 +65,7 @@ test('cada herramienta carga sin errores', async () => {
   for (const r of ROUTES) {
     await page.goto(base + r.hash);
     await page.waitForLoadState('load');
-    assert.deepEqual(await visibleView(page), [r.view], `ruta ${r.hash}`);
+    assert.deepEqual(await visibleView(page, r.view), [r.view], `ruta ${r.hash}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `scroll horizontal en ${r.hash}`);
   }
   assert.match(await page.textContent('#o-main'), /\d/, 'la placa orificio no muestra resultado');
@@ -79,9 +80,10 @@ test('funciona sin conexión', async () => {
   await context.setOffline(true);
   for (const r of ROUTES) {
     await page.goto(base + r.hash);
-    assert.deepEqual(await visibleView(page), [r.view], `offline ${r.hash}`);
+    assert.deepEqual(await visibleView(page, r.view), [r.view], `offline ${r.hash}`);
   }
   await page.reload();
+  await visibleView(page, 'orifice');
   assert.match(await page.textContent('#o-main'), /\d/);
   assert.deepEqual(errors, []);
   await context.close();
@@ -107,6 +109,53 @@ test('el aviso de versión nueva actualiza la app', async () => {
   await Promise.all([page.waitForEvent('load'), page.click('#update-btn')]);
   assert.equal(await page.textContent('#version'), 'nueva', 'tras actualizar debe verse la versión nueva');
   assert.deepEqual(await page.evaluate(() => caches.keys()), [`${oldCache}-next`]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('inicio: buscador, recientes y botón atrás', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base);
+  assert.equal(await page.locator('#catalog a.tool').count(), 3);
+  await page.fill('#search', 'psi');
+  assert.deepEqual(await page.locator('#catalog a.tool strong').allTextContents(), ['Conversor de unidades']);
+  await page.fill('#search', 'namur');
+  await page.press('#search', 'Enter');
+  assert.deepEqual(await visibleView(page, 'signal'), ['signal']);
+  assert.equal(await page.textContent('#title'), 'Señal 4-20 mA');
+  await page.click('#back');
+  assert.deepEqual(await visibleView(page, 'home'), ['home']);
+  await page.fill('#search', '');
+  assert.deepEqual(await page.locator('#recent a.chip strong').allTextContents(), ['Señal 4-20 mA']);
+  await page.fill('#search', 'zzz');
+  assert.equal(await page.isVisible('#no-results'), true);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('recuerda los datos y el tema al volver a abrir', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base + '#/units');
+  await visibleView(page, 'units');
+  await page.selectOption('#u-quantity', 'temperature');
+  await page.selectOption('#u-from', 'C');
+  await page.fill('#u-value', '-40');
+  await page.goto(base + '#/signal');
+  await visibleView(page, 'signal');
+  await page.fill('#s-urv', '250');
+  await page.fill('#s-ma', '20');
+  await page.selectOption('#theme', 'dark');
+
+  await page.reload();
+  await visibleView(page, 'signal');
+  assert.equal(await page.inputValue('#s-pv'), '250');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+  assert.equal(await page.inputValue('#theme'), 'dark');
+  await page.goto(base + '#/units');
+  await visibleView(page, 'units');
+  assert.equal(await page.inputValue('#u-quantity'), 'temperature');
+  assert.equal(await page.inputValue('#u-value'), '-40');
+  assert.match(await page.textContent('#u-results'), /−?-?40/);
   assert.deepEqual(errors, []);
   await context.close();
 });
