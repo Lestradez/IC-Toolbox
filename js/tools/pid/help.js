@@ -18,7 +18,7 @@ export const help = {
       'Regla SIMC, controlador PI; λ por defecto (= θ = 10 s).',
       'Bloque de destino: genérico ideal (ISA).',
     ],
-    result: 'Kc = 1,5, Ti = 45 s. En «Constantes para cargar» salen P, I y D en las unidades de tu bloque (con el motivo si I o D quedan en 0, p. ej. por elegir PI); compara la simulación con la respuesta real del lazo.',
+    result: 'Kc = 1,5, Ti = 45 s. En «Para cargar en…» salen P, I y D en las unidades de tu bloque (con el motivo si I o D quedan en 0, p. ej. por elegir PI); compara la simulación con la respuesta real del lazo.',
   },
   limits: [
     'El modelo es de primer orden con tiempo muerto (o integrador con tiempo muerto): procesos muy oscilatorios o con respuesta inversa no se describen bien.',
