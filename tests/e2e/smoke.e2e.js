@@ -17,6 +17,7 @@ const ROUTES = [
   { hash: '#/units', view: 'units' },
   { hash: '#/signal', view: 'signal' },
   { hash: '#/orifice', view: 'orifice' },
+  { hash: '#/temperature', view: 'temperature' },
 ];
 
 let dir;
@@ -82,6 +83,7 @@ test('funciona sin conexión', async () => {
     await page.goto(base + r.hash);
     assert.deepEqual(await visibleView(page, r.view), [r.view], `offline ${r.hash}`);
   }
+  await page.goto(`${base}#/orifice`);
   await page.reload();
   await visibleView(page, 'orifice');
   assert.match(await page.textContent('#o-main'), /\d/);
@@ -116,7 +118,7 @@ test('el aviso de versión nueva actualiza la app', async () => {
 test('inicio: buscador, recientes y botón atrás', async () => {
   const { context, page, errors } = await newPage();
   await page.goto(base);
-  assert.equal(await page.locator('#catalog a.tool').count(), 3);
+  assert.equal(await page.locator('#catalog a.tool').count(), 4);
   await page.fill('#search', 'psi');
   assert.deepEqual(await page.locator('#catalog a.tool strong').allTextContents(), ['Conversor de unidades', 'Escalado de señales']);
   await page.fill('#search', 'namur');
@@ -232,6 +234,26 @@ test('escalado de señales: presets, cambio de unidad y raíz cuadrada', async (
   await page.fill('#s-pct', '25');
   assert.equal(await page.inputValue('#s-out'), '50');
   assert.equal(await page.isVisible('#s-b-custom'), true);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('RTD y termopares: valores de tabla en los dos sentidos', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(`${base}#/temperature`);
+  await page.waitForSelector('[data-view="temperature"]:not([hidden]) #t-main');
+  // Pt100 a 100 °C = 138,5055 Ω (IEC 60751).
+  await page.waitForFunction(() => document.getElementById('t-main').textContent.startsWith('138,50'));
+  await page.fill('#t-rR', '175,86');
+  assert.match(await page.inputValue('#t-rT'), /^200,0[01]$/);
+
+  // Termopar K a 400 °C con junta fría a 25 °C: 16,397 − 1,000 = 15,397 mV en bornes.
+  await page.click('.tabs [data-mode="tc"]');
+  assert.equal(await page.inputValue('#t-tE'), '15,397');
+  await page.fill('#t-cj', '0');
+  await page.fill('#t-tE', '41,276');
+  assert.match(await page.inputValue('#t-tT'), /^(999,99|1000,0[01])$/);
+  assert.match(await page.textContent('#t-table'), /mA|20,00/);
   assert.deepEqual(errors, []);
   await context.close();
 });

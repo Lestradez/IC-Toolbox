@@ -13,6 +13,7 @@ y escritorio y funciona sin conexión.
 | Conversor de unidades (presión, temperatura, caudal volumétrico y másico, nivel) | ✅ |
 | Escalado de señales: 4-20 mA, 0-10 V, 3-15 psi… (presets) o cualquier magnitud/unidad ↔ %, raíz cuadrada, NAMUR NE 43 | ✅ |
 | Placa orificio ISO 5167-2: caudal (líquido, crudo + agua, gas con ε), dimensionamiento de d, caudal desde rango | ✅ |
+| RTD (Pt100/500/1000 IEC 60751, Ni100/Ni1000 DIN 43760, Ni120) y termopares J, K, T, E, N, R, S, B (ITS-90): °C ↔ Ω / mV, cables a 2 hilos, junta fría y puntos de calibración | ✅ |
 | Tablas de densidades | Pendiente |
 
 > Las herramientas son de apoyo. Verifica los resultados críticos contra la norma
@@ -34,7 +35,7 @@ npm ci && npx playwright install chromium
 npm run test:e2e  # test de humo en Chromium: rutas, offline y aviso de actualización
 ```
 
-Los cálculos viven en módulos puros (`js/units.js`, `js/orifice.js`, `js/pipes.js`) sin DOM, para poder testearlos.
+Los cálculos viven en módulos puros (`js/units.js`, `js/orifice.js`, `js/pipes.js`, `js/temperature.js`) sin DOM, para poder testearlos.
 
 ### Añadir una herramienta
 
