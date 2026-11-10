@@ -64,6 +64,20 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   ], { lo: 0, hi: 10, url: 25, reading: 10 });
   near(t.rssSpan, 0.125, 5e-4); near(t.worstSpan, 0.209, 5e-4); near(t.turndown, 2.5, 1e-9);
 
+  const { emptyDoc, evaluateDoc } = await import('../js/calsheet.js');
+  assert.match(await ex('calsheet'), /0,008 mA \(0,05 % span\), TUR 10:1.*↑ \+0,625 % y ↓ \+0,813 % span, histéresis 0,188 %: no cumple.*↓ \+0,125 % span, cumple/);
+  const cs = { ...emptyDoc('x'), tol: '0,5' };
+  cs.std = { ...cs.std, U: '0,005' };
+  cs.asFound.up[2] = '12,10'; cs.asFound.down[2] = '12,13';
+  cs.asLeft.up[2] = '12,00'; cs.asLeft.down[2] = '12,02';
+  const ce = evaluateDoc(cs);
+  near(ce.U, 0.008, 1e-12); near(ce.found.USpan, 0.05, 1e-9); near(ce.found.tur, 10, 1e-9);
+  const f50 = ce.found.points[2];
+  near(f50.errUpSpan, 0.625, 1e-9); near(f50.errDownSpan, 0.8125, 1e-9); near(f50.hysteresisSpan, 0.1875, 1e-9);
+  assert.equal(f50.verdict, 'fail');
+  near(ce.left.points[2].errDownSpan, 0.125, 1e-9);
+  assert.equal(ce.left.verdict, 'pass');
+
   assert.match(await ex('level'), /LRV = 0 mbar y URV = 706,079 mbar.*0 a 8 m.*1 a 9 m.*0 a 8 m más 1 m.*11,1 %/);
   const tk = tankRange({ config: 'open', top: 9, tap: 1, rho: 900 });
   near(tk.lrv / 100, 0, 1e-9); near(tk.urv / 100, 706.079, 5e-4);

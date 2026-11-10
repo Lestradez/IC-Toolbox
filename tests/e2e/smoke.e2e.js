@@ -20,6 +20,7 @@ const ROUTES = [
   { hash: '#/orifice', view: 'orifice' },
   { hash: '#/temperature', view: 'temperature' },
   { hash: '#/calibration', view: 'calibration' },
+  { hash: '#/calsheet', view: 'calsheet' },
   { hash: '#/level', view: 'level' },
   { hash: '#/pid', view: 'pid' },
   { hash: '#/densities', view: 'densities' },
@@ -81,6 +82,82 @@ test('cada herramienta carga sin errores', async () => {
   await page.goto(base + '#/level');
   await page.waitForSelector('[data-view="level"]:not([hidden])');
   assert.match(await page.textContent('#l-main'), /^0 … 706,079 mbar$/, 'nivel por ΔP');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('planilla de calibración: as found, as left, guardar, Excel y PDF', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base + '#/calsheet');
+  await visibleView(page, 'calsheet');
+  const noHScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+  assert.equal(await page.textContent('#k-main'), 'Sin lecturas');
+
+  // Transmisor 0–10 bar, 4–20 mA (por defecto), 3 puntos, U del patrón 0,005 bar.
+  await page.fill('[data-k="tag"]', 'PT-101');
+  await page.selectOption('[data-k="n"]', '3');
+  await page.fill('[data-k="std.U"]', '0,005');
+  assert.equal(await noHScroll(), true, 'scroll horizontal en Datos');
+
+  await page.click('[data-mode="asFound"]');
+  const pt = (s, f, i) => `[data-s="${s}"][data-f="${f}"][data-i="${i}"]`;
+  for (const [i, up, down] of [[0, '4,01', '4,02'], [1, '12,10', '12,13'], [2, '20,02', '20,02']]) {
+    await page.fill(pt('asFound', 'up', i), up);
+    await page.fill(pt('asFound', 'down', i), down);
+  }
+  assert.equal(await page.getAttribute(pt('asFound', 'applied', 1), 'placeholder'), '5');
+  assert.match(await page.textContent('#k-pts-asFound .cs-pt[data-i="1"]'), /esperado 12 mA[^]*↑ \+0,625 % · ↓ \+0,813 % · hist\. 0,188 % → No cumple/);
+  assert.equal(await page.textContent('#k-main'), 'No cumple');
+  assert.equal(await noHScroll(), true, 'scroll horizontal en As found');
+
+  // As left: copiar y corregir el punto ajustado.
+  await page.click('[data-mode="asLeft"]');
+  await page.click('#k-copy-found');
+  await page.fill(pt('asLeft', 'up', 1), '12,00');
+  await page.fill(pt('asLeft', 'down', 1), '12,02');
+  assert.equal(await page.textContent('#k-main'), 'Cumple');
+  assert.match(await page.textContent('#k-rows'), /As found.*No cumple.*As left.*Cumple.*TUR 10:1/);
+
+  // Guardar en el teléfono y sobrevive a recargar.
+  await page.click('[data-mode="files"]');
+  await page.click('#k-save');
+  assert.match(await page.textContent('#k-list'), /PT-101.*Cumple/);
+  await page.reload();
+  await visibleView(page, 'calsheet');
+  assert.match(await page.textContent('#k-list'), /PT-101/);
+  assert.match(await page.textContent('#k-saved-state'), /Guardada el/);
+  assert.equal(await noHScroll(), true, 'scroll horizontal en Guardar');
+
+  // Excel: descarga un .xlsx (ZIP) con el TAG y la fecha en el nombre.
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#k-xlsx')]);
+  assert.match(dl.suggestedFilename(), /^calibracion_PT-101_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const bytes = await readFile(await dl.path());
+  assert.equal(bytes.subarray(0, 2).toString(), 'PK');
+
+  // PDF: abre el diálogo de impresión con el informe; en papel solo sale el informe.
+  await page.evaluate(() => { window.print = () => { window.printed = document.title; }; });
+  await page.click('#k-pdf');
+  assert.match(await page.evaluate(() => window.printed), /^calibracion_PT-101_/);
+  assert.match(await page.textContent('#cs-print'), /PT-101.*Resultado: Cumple.*As found.*No cumple.*As left.*Cumple/s);
+  await page.emulateMedia({ media: 'print' });
+  assert.equal(await page.isVisible('#cs-print'), true);
+  assert.equal(await page.isVisible('#app'), false);
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await page.emulateMedia({ media: 'screen' });
+  assert.equal(await page.isVisible('#app'), true);
+
+  // Nueva planilla conserva el patrón; borrar una guardada se puede deshacer.
+  await page.click('#k-new');
+  await page.click('[data-mode="data"]');
+  assert.equal(await page.inputValue('[data-k="tag"]'), '');
+  assert.equal(await page.inputValue('[data-k="std.U"]'), '0,005');
+  await page.click('[data-mode="files"]');
+  await page.click('#k-list button:has-text("Borrar")');
+  assert.doesNotMatch(await page.textContent('#k-list'), /PT-101/);
+  await page.click('#toast button');
+  assert.match(await page.textContent('#k-list'), /PT-101/);
+  await page.click('#k-list button:has-text("Abrir")');
+  assert.equal(await page.inputValue('[data-k="tag"]'), 'PT-101');
   assert.deepEqual(errors, []);
   await context.close();
 });

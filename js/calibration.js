@@ -179,7 +179,9 @@ export function calibrationPoint({ readings, ref, lo, hi, uStd = 0, kStd = 2, to
 
   let verdict = null;
   if (tol > 0 && span > 0 && Number.isFinite(error)) {
-    const lim = (tol / 100) * span;
+    // Holgura relativa de 1e-9: 12,08 − 12 da 0,0800000000000001 y no debe fallar
+    // contra un límite de 0,08 (el error justo en la tolerancia cumple).
+    const lim = (tol / 100) * span * (1 + 1e-9);
     const Uv = Number.isFinite(U) ? U : 0;
     if (Math.abs(error) + Uv <= lim) verdict = 'pass';
     else if (Math.abs(error) - Uv > lim) verdict = 'fail';
