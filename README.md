@@ -4,7 +4,7 @@ Navaja suiza **offline** para instrumentistas de instrumentación y control.
 Es una PWA (HTML + JS sin dependencias): se instala desde el navegador en Android
 y escritorio y funciona sin conexión.
 
-**App:** https://lestradez.github.io/ic-toolbox/
+**App:** https://lestradez.github.io/IC-Toolbox/
 
 ## Herramientas
 
