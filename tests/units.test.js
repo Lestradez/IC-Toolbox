@@ -41,6 +41,7 @@ test('caudal', () => {
   close(convert('volFlow', 1, 'USgpm', 'm3/h'), 0.227124707);
   close(convert('volFlow', 1, 'm3/h', 'L/min'), 16.6666667);
   close(convert('volFlow', 1, 'bbl/d', 'm3/h'), 0.006624471);
+  close(convert('volFlow', 1, 'm3/d', 'bbl/d'), 6.28981077);
   close(convert('volFlow', 1, 'cfm', 'm3/h'), 1.699010796);
   close(convert('massFlow', 1, 't/h', 'kg/h'), 1000);
   close(convert('massFlow', 1000, 'lb/h', 'kg/h'), 453.59237);

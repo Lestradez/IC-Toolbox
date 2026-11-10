@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>I&amp;C Toolbox</title>
-  <meta name="description" content="Navaja suiza offline para instrumentistas: conversiones de unidades, señales 4-20 mA y más.">
+  <meta name="description" content="Navaja suiza offline para instrumentistas: conversiones de unidades, señales 4-20 mA, placa orificio ISO 5167 y más.">
   <meta name="theme-color" content="#0f4c5c">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -33,10 +33,10 @@
           <strong>Señal 4-20 mA</strong>
           <span>mA ↔ % ↔ valor de proceso, raíz cuadrada, NAMUR NE 43</span>
         </a>
-        <div class="tool soon">
+        <a class="tool" href="#/orifice">
           <strong>Placa orificio (ISO 5167)</strong>
-          <span>Próximamente</span>
-        </div>
+          <span>Caudal, dimensionamiento de d y caudal desde rango</span>
+        </a>
         <div class="tool soon">
           <strong>Tablas de densidades</strong>
           <span>Próximamente</span>
@@ -105,6 +105,196 @@
         <thead><tr><th>Señal %</th><th>mA</th><th>Valor</th></tr></thead>
         <tbody id="s-table"></tbody>
       </table>
+    </section>
+
+    <!-- Placa orificio -->
+    <section data-view="orifice" hidden>
+      <h1>Placa orificio (ISO 5167-2)</h1>
+      <div class="tabs" role="tablist" aria-label="Modo de cálculo">
+        <button type="button" role="tab" data-mode="flow">Calcular caudal</button>
+        <button type="button" role="tab" data-mode="size">Dimensionar d</button>
+        <button type="button" role="tab" data-mode="range">Desde rango</button>
+      </div>
+
+      <div class="card" data-modes="flow size">
+        <h2>Tubería y placa</h2>
+        <label>Diámetro interno de la tubería
+          <select id="o-Dmode">
+            <option value="nps">NPS + schedule (ASME B36.10M)</option>
+            <option value="man">D interno manual</option>
+          </select>
+        </label>
+        <div class="row" id="o-npsBox">
+          <label>NPS <select id="o-nps"></select></label>
+          <label>Schedule <select id="o-sch"></select></label>
+        </div>
+        <label id="o-manBox">D interno
+          <span class="combo"><input id="o-D" type="text" inputmode="decimal" value="77,92"><select id="o-Du"><option value="mm">mm</option><option value="in">in</option></select></span>
+        </label>
+        <p id="o-Dhint" class="hint"></p>
+        <div class="row">
+          <label data-modes="flow">d orificio
+            <span class="combo"><input id="o-d" type="text" inputmode="decimal" value="40"><select id="o-du"><option value="mm">mm</option><option value="in">in</option></select></span>
+          </label>
+          <label>Tomas de presión
+            <select id="o-taps">
+              <option value="flange">Brida (flange taps)</option>
+              <option value="corner">Esquina (corner taps)</option>
+              <option value="dd2">D y D/2</option>
+            </select>
+          </label>
+        </div>
+        <p id="o-betaHint" class="hint" data-modes="flow"></p>
+      </div>
+
+      <div class="card" data-modes="flow">
+        <h2>Presión diferencial</h2>
+        <label>Fuente del ΔP
+          <select id="o-src">
+            <option value="dp">Lectura directa de ΔP</option>
+            <option value="ma">Señal 4-20 mA del transmisor</option>
+          </select>
+        </label>
+        <label id="o-dpBox">ΔP
+          <span class="combo"><input id="o-dp" type="text" inputmode="decimal" value="250"><select id="o-dpu" data-units="pressure" data-default="mbar"></select></span>
+        </label>
+        <div id="o-maBox">
+          <div class="row">
+            <label>Señal (mA) <input id="o-ma" type="text" inputmode="decimal" value="12"></label>
+            <label>URV (ΔP a 20 mA)
+              <span class="combo"><input id="o-urv" type="text" inputmode="decimal" value="500"><select id="o-urvu" data-units="pressure" data-default="mbar"></select></span>
+            </label>
+          </div>
+          <label>Salida del transmisor
+            <select id="o-out">
+              <option value="lin">Lineal en ΔP</option>
+              <option value="sqrt">Con raíz cuadrada (lineal en caudal)</option>
+            </select>
+          </label>
+          <p class="hint">LRV = 0. Comprueba en el HART o el DCS si la raíz la hace el transmisor o el sistema: el resultado cambia mucho.</p>
+        </div>
+      </div>
+
+      <div class="card" data-modes="size">
+        <h2>Condición de diseño</h2>
+        <div class="row">
+          <label>Caudal máximo
+            <span class="combo"><input id="o-qd" type="text" inputmode="decimal" value="20"><select id="o-qdu"></select></span>
+          </label>
+          <label>ΔP a caudal máximo
+            <span class="combo"><input id="o-dpd" type="text" inputmode="decimal" value="250"><select id="o-dpdu" data-units="pressure" data-default="mbar"></select></span>
+          </label>
+        </div>
+        <p class="hint">Valores típicos de ΔP de diseño: 100–250 inH₂O (250–620 mbar) en líquidos; en gases, que ΔP/p1 no supere ~2–4 %.</p>
+      </div>
+
+      <div class="card" data-modes="flow size">
+        <h2>Fluido</h2>
+        <label>Tipo
+          <select id="o-fluid">
+            <option value="liq">Líquido</option>
+            <option value="bsw">Crudo + agua (BSW)</option>
+            <option value="gas">Gas o vapor</option>
+          </select>
+        </label>
+        <div class="row" data-fluids="liq">
+          <label>ρ a T de operación (kg/m³) <input id="o-rho" type="text" inputmode="decimal" value="998,2"></label>
+        </div>
+        <div class="row" data-fluids="bsw">
+          <label>BSW (% agua) <input id="o-bsw" type="text" inputmode="decimal" value="60"></label>
+          <label>ρ crudo (kg/m³) <input id="o-ro" type="text" inputmode="decimal" value="850"></label>
+          <label>ρ agua (kg/m³) <input id="o-rw" type="text" inputmode="decimal" value="1050"></label>
+        </div>
+        <div data-fluids="gas">
+          <div class="row">
+            <label>p1 aguas arriba
+              <span class="combo"><input id="o-p1" type="text" inputmode="decimal" value="10"><select id="o-p1u" data-units="pressure" data-default="bar"></select></span>
+            </label>
+            <label>Referencia
+              <select id="o-p1ref"><option value="g">Manométrica (+1,01325 bar)</option><option value="a">Absoluta</option></select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Densidad ρ1
+              <select id="o-rhomode"><option value="calc">Calcular con p1, T1, M y Z</option><option value="given">Conocida (tablas, vapor)</option></select>
+            </label>
+            <label>κ (cp/cv) <input id="o-k" type="text" inputmode="decimal" value="1,3"></label>
+          </div>
+          <div class="row" id="o-rhoCalcBox">
+            <label>T1 (°C) <input id="o-T" type="text" inputmode="decimal" value="25"></label>
+            <label>M (g/mol) <input id="o-M" type="text" inputmode="decimal" value="18,04"></label>
+            <label>Z a p1, T1 <input id="o-Z" type="text" inputmode="decimal" value="0,98"></label>
+          </div>
+          <label id="o-rho1Box">ρ1 a p1, T1 (kg/m³) <input id="o-rho1" type="text" inputmode="decimal" value="5,16"></label>
+          <p class="hint">Aire: M = 28,96, κ = 1,40 · Gas natural: M ≈ 17–20, κ ≈ 1,27–1,31 · Vapor sobrecalentado: κ ≈ 1,3, ρ1 de tablas.
+          Nm³ y Sm³ solo se calculan con ρ1 calculada (necesitan M).</p>
+        </div>
+        <label>Viscosidad dinámica (cP) <input id="o-mu" type="text" inputmode="decimal" value="1"></label>
+        <p class="hint">Solo afecta a Re y C.</p>
+        <p class="hint" data-fluids="bsw">En emulsiones crudo-agua puede ser 10–100 veces la del crudo; si dudas, prueba un valor alto y mira si C cambia.</p>
+        <div data-modes="flow">
+          <label>Coeficiente de descarga C
+            <select id="o-cmode">
+              <option value="rhg">Calcular (Reader-Harris/Gallagher)</option>
+              <option value="fix">Fijo (hoja de datos o calibración)</option>
+            </select>
+          </label>
+          <label id="o-cfixBox">C fijo <input id="o-cfix" type="text" inputmode="decimal" value="0,605"></label>
+        </div>
+      </div>
+
+      <div class="card" data-modes="range">
+        <h2>Datos de diseño (hoja de datos de la placa)</h2>
+        <div class="row">
+          <label>Q máx
+            <span class="combo"><input id="o-qmax" type="text" inputmode="decimal" value="300"><select id="o-qmaxu"><option value="m3/d">m³/d</option><option value="m3/h">m³/h</option><option value="bbl/d">bbl/d</option><option value="L/min">L/min</option><option value="USgpm">US gpm</option></select></span>
+          </label>
+          <label>ΔP a Q máx
+            <span class="combo"><input id="o-dpmax" type="text" inputmode="decimal" value="500"><select id="o-dpmaxu" data-units="pressure" data-default="mbar"></select></span>
+          </label>
+          <label>ρ de diseño (kg/m³) <input id="o-rd" type="text" inputmode="decimal" value="1000"></label>
+          <label>ρ real (kg/m³) <input id="o-ra" type="text" inputmode="decimal" value="970"></label>
+        </div>
+      </div>
+
+      <div class="card" data-modes="range">
+        <h2>Lectura</h2>
+        <label>Fuente
+          <select id="o-src2">
+            <option value="dp">ΔP directo</option>
+            <option value="ma">Señal 4-20 mA (URV = ΔP a Q máx)</option>
+          </select>
+        </label>
+        <label id="o-dp2Box">ΔP actual
+          <span class="combo"><input id="o-dp2" type="text" inputmode="decimal" value="250"><select id="o-dp2u" data-units="pressure" data-default="mbar"></select></span>
+        </label>
+        <div class="row" id="o-ma2Box">
+          <label>Señal (mA) <input id="o-ma2" type="text" inputmode="decimal" value="12"></label>
+          <label>Salida
+            <select id="o-out2"><option value="lin">Lineal en ΔP</option><option value="sqrt">Raíz cuadrada</option></select>
+          </label>
+        </div>
+        <label>Corte de bajo caudal (% de Q máx) <input id="o-cut" type="text" inputmode="decimal" value="5"></label>
+      </div>
+
+      <div class="card result">
+        <h2>Resultado</h2>
+        <p class="big"><span id="o-main">—</span><span id="o-mainAlt" class="alt"></span></p>
+        <table class="results kv"><tbody id="o-results"></tbody></table>
+        <ul id="o-msgs" class="msgs"></ul>
+        <div class="actions">
+          <button type="button" id="o-copy">Copiar resultado</button>
+          <button type="button" id="o-reset">Valores de ejemplo</button>
+        </div>
+      </div>
+      <details class="note">
+        <summary>Método y límites</summary>
+        <p>Ecuaciones de ISO 5167-1 y ISO 5167-2:2003: C de Reader-Harris/Gallagher (con el término para D &lt; 71,12 mm),
+        ε según la ecuación 5 (ε = 1 para líquidos), pérdida de presión permanente según la ecuación 7.
+        C se itera con Re_D hasta converger. El dimensionamiento resuelve β por bisección con Re_D fijado por el caudal.
+        Las incertidumbres de C y ε son las de la norma y no incluyen las de D, d, ΔP ni ρ.</p>
+        <p>«Desde rango» supone C y ε constantes y corrige solo por densidad: Q = Qmáx · √(ΔP/ΔPmáx) · √(ρdiseño/ρreal).</p>
+      </details>
     </section>
   </main>
 

@@ -102,3 +102,48 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent);
 
 .foot { display: flex; justify-content: space-between; padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px); color: var(--muted); font-size: .8rem; max-width: 760px; width: 100%; margin: 0 auto; }
 .foot a { color: inherit; }
+
+/* El atributo hidden debe ganar a display:flex/grid de las clases */
+[hidden] { display: none !important; }
+
+h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin: 0 0 12px; }
+
+/* Pestañas de modo */
+.tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.tabs button {
+  flex: 1; font: inherit; font-size: .9rem; min-height: 44px; padding: 8px 6px; cursor: pointer;
+  color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+}
+.tabs button.on { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+@media (prefers-color-scheme: dark) { .tabs button.on { color: #0b2f38; } }
+
+/* Valor + unidad en un mismo control */
+.combo { display: flex; }
+.combo input { border-radius: 8px 0 0 8px; min-width: 0; }
+.combo select { width: auto; flex: 0 0 auto; max-width: 48%; border-left: 0; border-radius: 0 8px 8px 0; font-size: .95rem; }
+
+/* Resultado */
+.big { margin: 0 0 12px; display: flex; flex-direction: column; }
+.big #o-main { font-size: 1.9rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.big small { font-size: 1rem; font-weight: 400; color: var(--muted); }
+.big .alt { font-size: .9rem; color: var(--text); }
+.card.result .results { border-radius: 8px; }
+.results.kv td:first-child { color: var(--muted); font-size: .85rem; }
+.results.kv td.num { text-align: right; font-size: .9rem; }
+.results.kv td { padding: 8px 10px; }
+
+.msgs { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+.msgs li { font-size: .85rem; padding: 8px 10px; border-radius: 8px; border-left: 3px solid; background: var(--bg); }
+.msgs li.ok { border-color: var(--ok); }
+.msgs li.warn { border-color: var(--warn); }
+.msgs li.bad { border-color: var(--bad); color: var(--bad); }
+
+.actions { display: flex; gap: 8px; }
+.actions button {
+  flex: 1; font: inherit; font-size: .9rem; min-height: 44px; cursor: pointer;
+  color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px;
+}
+.actions button:hover { border-color: var(--accent); }
+
+details.note { margin-bottom: 16px; }
+details.note summary { cursor: pointer; }

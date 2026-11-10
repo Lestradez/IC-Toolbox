@@ -1,30 +1,11 @@
 import {
   QUANTITIES, convertAll, mAToPercent, percentToMA, percentToPV, pvToPercent, namurStatus,
 } from './units.js';
+import { parseNum, fmt, $ } from './ui.js';
+import { initOrifice } from './orifice-view.js';
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 document.getElementById('version').textContent = APP_VERSION;
-
-// ---------------------------------------------------------------------------
-// Utilidades
-// ---------------------------------------------------------------------------
-
-/** Acepta coma o punto decimal. Devuelve NaN si no es un número. */
-function parseNum(str) {
-  const s = String(str).trim().replace(/\s/g, '').replace(',', '.');
-  if (s === '' || s === '-' || s === '.') return NaN;
-  return Number(s);
-}
-
-const nf = new Intl.NumberFormat('es-ES', { maximumSignificantDigits: 6, useGrouping: false });
-function fmt(n) {
-  if (!Number.isFinite(n)) return '—';
-  const a = Math.abs(n);
-  if (a !== 0 && (a < 1e-4 || a >= 1e9)) return n.toExponential(5).replace('.', ',');
-  return nf.format(n);
-}
-
-const $ = (id) => document.getElementById(id);
 
 // ---------------------------------------------------------------------------
 // Router por hash
@@ -156,6 +137,12 @@ for (const id of ['s-lrv', 's-urv', 's-unit', 's-sqrt']) {
   $(id).addEventListener(id === 's-sqrt' ? 'change' : 'input', () => updateSignal(lastSignalSource));
 }
 updateSignal('ma');
+
+// ---------------------------------------------------------------------------
+// Placa orificio
+// ---------------------------------------------------------------------------
+
+initOrifice();
 
 // ---------------------------------------------------------------------------
 // Estado de red y service worker

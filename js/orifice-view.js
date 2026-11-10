@@ -1,0 +1,433 @@
+// Vista de la placa orificio. La lógica de cálculo vive en orifice.js (testeada).
+import {
+  orificeFlow, sizeOrifice, flowFromRange, validityChecks, uncertaintyC, uncertaintyEps,
+  gasDensity, mixtureDensity, P_STD, T_NORMAL, T_STANDARD, TAPS,
+} from './orifice.js';
+import { PIPES, pipeID, schedules, matchSchedule } from './pipes.js';
+import { QUANTITIES, convert, mAToPercent, namurStatus } from './units.js';
+import { parseNum, fmt, fmtFixed, $ } from './ui.js';
+
+const STORAGE_KEY = 'ict.orifice.v1';
+const BBL = 0.158987294928; // m³
+
+const FLOW_UNITS_DESIGN = [
+  ['vol:m3/h', 'm³/h (operación)'], ['vol:m3/d', 'm³/d (operación)'], ['vol:bbl/d', 'bbl/d (operación)'],
+  ['vol:L/min', 'L/min (operación)'], ['vol:USgpm', 'US gpm (operación)'],
+  ['mass:kg/h', 'kg/h'], ['mass:t/h', 't/h'], ['mass:lb/h', 'lb/h'],
+  ['std:N', 'Nm³/h (0 °C, 1 atm)'], ['std:S', 'Sm³/h (15 °C, 1 atm)'],
+];
+
+let mode = 'flow';
+let lastText = '';
+let ids = [];
+const defaults = {};
+
+const num = (id) => parseNum($(id).value);
+const pa = (id, unitId) => convert('pressure', num(id), $(unitId).value, 'Pa');
+const toM = (v, u) => (u === 'in' ? v * 0.0254 : v / 1000);
+
+function showIf(el, cond) { el.hidden = !cond; }
+
+/** Lee el diámetro interno (m) y un texto descriptivo. */
+function readPipe() {
+  if ($('o-Dmode').value === 'nps') {
+    const p = pipeID($('o-nps').value, $('o-sch').value);
+    $('o-Dhint').textContent =
+      `D int = ${fmtFixed(p.id, 2)} mm (${fmtFixed(p.id / 25.4, 3)} in) · OD ${fmtFixed(p.od, 2)} mm · pared ${fmtFixed(p.t, 2)} mm`;
+    return { D: p.id / 1000, label: `${$('o-nps').value} Sch ${$('o-sch').value}` };
+  }
+  $('o-Dhint').textContent = '';
+  return { D: toM(num('o-D'), $('o-Du').value), label: 'D manual' };
+}
+
+/**
+ * Lee el fluido. Devuelve { rho, mu, p1?, kappa?, M?, bsw?, ok, label }.
+ * p1 y kappa solo para gases (activan ε).
+ */
+function readFluid() {
+  const type = $('o-fluid').value;
+  const mu = num('o-mu') / 1000;
+  if (type === 'liq') return { type, rho: num('o-rho'), mu, label: `ρ=${fmt(num('o-rho'), 5)} kg/m³` };
+  if (type === 'bsw') {
+    const bsw = num('o-bsw') / 100;
+    const ro = num('o-ro');
+    const rw = num('o-rw');
+    const bad = !(bsw >= 0 && bsw <= 1) || !(ro > 0) || !(rw > 0);
+    return {
+      type, bsw, ro, rw, mu, rho: bad ? NaN : mixtureDensity(bsw, ro, rw),
+      label: `BSW=${fmt(bsw * 100, 4)} % ρm=${fmt(mixtureDensity(bsw, ro, rw), 5)} kg/m³`,
+    };
+  }
+  let p1 = pa('o-p1', 'o-p1u');
+  if ($('o-p1ref').value === 'g') p1 += P_STD;
+  const kappa = num('o-k');
+  if ($('o-rhomode').value === 'given') {
+    return { type, p1, kappa, mu, rho: num('o-rho1'), label: `p1=${fmt(p1 / 1e5, 5)} bar(a) ρ1=${fmt(num('o-rho1'), 5)} kg/m³ κ=${fmt(kappa, 4)}` };
+  }
+  const T = num('o-T') + 273.15;
+  const M = num('o-M') / 1000;
+  const Z = num('o-Z');
+  const rho = T > 0 && M > 0 && Z > 0 && p1 > 0 ? gasDensity(p1, T, M, Z) : NaN;
+  return {
+    type, p1, kappa, mu, rho, M,
+    label: `p1=${fmt(p1 / 1e5, 5)} bar(a) T1=${fmt(T - 273.15, 4)} °C M=${fmt(M * 1000, 4)} Z=${fmt(Z, 4)} κ=${fmt(kappa, 4)} → ρ1=${fmt(rho, 5)} kg/m³`,
+  };
+}
+
+const gasArgs = (f) => (f.type === 'gas' ? { p1: f.p1, kappa: f.kappa } : {});
+const stdDensity = (M, T) => gasDensity(P_STD, T, M, 1);
+
+/** ΔP desde la señal mA con LRV = 0. Devuelve { dp, msgs }. */
+function dpFromMA(maId, urvPa, outId) {
+  const ma = num(maId);
+  const msgs = [];
+  if (!Number.isFinite(ma)) return { dp: NaN, msgs };
+  const st = namurStatus(ma);
+  if (st.startsWith('fallo')) msgs.push(['bad', `Señal de ${fmt(ma, 4)} mA en zona de fallo NAMUR NE 43.`]);
+  else if (st !== 'ok') msgs.push(['warn', `Señal de ${fmt(ma, 4)} mA fuera de 4–20 mA (saturación).`]);
+  const x = Math.max(0, Math.min(1.03, mAToPercent(ma) / 100));
+  const sqrt = $(outId).value === 'sqrt';
+  if (!sqrt && x < 0.1) {
+    msgs.push(['warn', `Señal en ${fmt(x * 100, 3)} % del rango de ΔP: por debajo de ~10 % la raíz cuadrada amplifica el error.`]);
+  }
+  return { dp: sqrt ? urvPa * x * x : urvPa * x, msgs };
+}
+
+// ---------------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------------
+
+function setResult(main, alt, rows, msgs) {
+  $('o-main').innerHTML = main;
+  $('o-mainAlt').textContent = alt;
+  const body = $('o-results');
+  body.innerHTML = '';
+  for (const [k, v] of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td></td><td class="num"></td>';
+    tr.children[0].textContent = k;
+    tr.children[1].textContent = v;
+    body.appendChild(tr);
+  }
+  const ul = $('o-msgs');
+  ul.innerHTML = '';
+  for (const [cls, text] of msgs) {
+    const li = document.createElement('li');
+    li.className = cls;
+    li.textContent = text;
+    ul.appendChild(li);
+  }
+}
+
+function unitSpan(value, unit) {
+  const s = document.createElement('span');
+  s.textContent = value;
+  const u = document.createElement('small');
+  u.textContent = ` ${unit}`;
+  return s.outerHTML + u.outerHTML;
+}
+
+function fail(text) {
+  setResult('—', '', [], [['bad', text]]);
+  lastText = '';
+}
+
+function validityMsgs(args) {
+  return validityChecks(args).map((m) => [m.level, m.text]);
+}
+
+function renderFlow() {
+  const pipe = readPipe();
+  const { D } = pipe;
+  const d = toM(num('o-d'), $('o-du').value);
+  const taps = $('o-taps').value;
+  const f = readFluid();
+  const msgs = [];
+  $('o-betaHint').textContent = `β = ${d > 0 && D > 0 ? fmtFixed(d / D, 4) : '—'}`;
+
+  let dp;
+  if ($('o-src').value === 'dp') dp = pa('o-dp', 'o-dpu');
+  else {
+    const r = dpFromMA('o-ma', pa('o-urv', 'o-urvu'), 'o-out');
+    dp = r.dp;
+    msgs.push(...r.msgs);
+  }
+  if (Number.isFinite(dp) && dp <= 0) {
+    setResult('0', 'ΔP ≤ 0: sin caudal medible', [], msgs);
+    lastText = '';
+    return;
+  }
+  const Cfixed = $('o-cmode').value === 'fix' ? num('o-cfix') : undefined;
+  if (Cfixed !== undefined && !(Cfixed > 0 && Cfixed < 1)) return fail('C fijo debe estar entre 0 y 1.');
+
+  let r;
+  try {
+    r = orificeFlow({ D, d, dp, rho: f.rho, mu: f.mu, taps, C: Cfixed, ...gasArgs(f) });
+  } catch (e) {
+    return fail(`Revisa los datos: ${e.message}.`);
+  }
+  if (!r.converged) msgs.push(['bad', 'La iteración de C no convergió: revisa los datos.']);
+
+  const qh = r.qv * 3600;
+  const rows = [];
+  let main;
+  let alt;
+  if (f.type === 'gas') {
+    main = unitSpan(fmt(r.qm * 3600, 5), 'kg/h');
+    alt = `${fmt(r.qm * 3.6, 5)} t/h · ${fmt(qh, 5)} m³/h a p1, T1`;
+    if (f.M) {
+      rows.push(['Caudal normal (0 °C, 1 atm, Z=1)', `${fmt(r.qm / stdDensity(f.M, T_NORMAL) * 3600, 5)} Nm³/h`]);
+      rows.push(['Caudal estándar (15 °C, 1 atm, Z=1)', `${fmt(r.qm / stdDensity(f.M, T_STANDARD) * 3600, 5)} Sm³/h`]);
+    }
+    rows.push(['ρ1', `${fmt(f.rho, 5)} kg/m³`]);
+    rows.push(['ε (expansibilidad)', `${fmtFixed(r.eps, 5)} (± ${fmt(uncertaintyEps(dp, f.p1, f.kappa), 2)} %)`]);
+    rows.push(['ΔP / p1', `${fmt(dp / f.p1 * 100, 3)} %`]);
+  } else {
+    main = unitSpan(fmt(qh, 5), 'm³/h');
+    alt = `${fmt(qh * 24, 5)} m³/d · ${fmt(qh * 24 / BBL, 5)} bbl/d · ${fmt(r.qv * 60000, 5)} L/min`;
+    if (f.type === 'bsw') {
+      rows.push(['Petróleo (sin deslizamiento)', `${fmt(qh * 24 * (1 - f.bsw), 5)} m³/d`]);
+      rows.push(['Agua', `${fmt(qh * 24 * f.bsw, 5)} m³/d`]);
+      rows.push(['ρ mezcla', `${fmt(f.rho, 5)} kg/m³`]);
+    }
+    rows.push(['Caudal másico', `${fmt(r.qm * 3.6, 5)} t/h · ${fmt(r.qm * 3600, 5)} kg/h`]);
+  }
+  const uC = Cfixed === undefined ? uncertaintyC(r.beta, D * 1000, r.ReD) : NaN;
+  rows.push(['C', `${fmtFixed(r.C, 4)}${Cfixed !== undefined ? ' (fijo)' : Number.isFinite(uC) ? ` (± ${fmt(uC, 2)} %)` : ''}`]);
+  rows.push(['Re_D', fmt(Math.round(r.ReD), 7)]);
+  rows.push(['β', fmtFixed(r.beta, 4)]);
+  rows.push(['Velocidad en tubería', `${fmt(r.velocity, 3)} m/s`]);
+  rows.push(['ΔP usado', `${fmt(dp / 100, 5)} mbar · ${fmt(convert('pressure', dp, 'Pa', 'inH2O'), 5)} inH₂O`]);
+  rows.push(['Pérdida permanente', `${fmt(r.loss / 100, 4)} mbar (${fmtFixed(r.loss / dp * 100, 0)} % del ΔP)`]);
+
+  if (f.type === 'bsw') {
+    const sens = [-0.1, 0.1].map((dl) => {
+      const b2 = Math.max(0, Math.min(1, f.bsw + dl));
+      const r2 = orificeFlow({ D, d, dp, rho: mixtureDensity(b2, f.ro, f.rw), mu: f.mu, taps, C: Cfixed });
+      const s = (r2.qv / r.qv - 1) * 100;
+      return `${s >= 0 ? '+' : ''}${fmtFixed(s, 1)} %`;
+    });
+    rows.push(['Sensibilidad al BSW (±10 puntos)', `−10 → ${sens[0]} · +10 → ${sens[1]}`]);
+  }
+
+  msgs.push(...validityMsgs({ D, d, ReD: r.ReD, taps, dp, p1: f.p1, Cfixed: Cfixed !== undefined }));
+  if (f.type !== 'gas' && r.velocity > 3) msgs.push(['warn', `Velocidad de ${fmt(r.velocity, 3)} m/s: revisa la erosión del borde y si el ΔP es coherente.`]);
+  if (f.type === 'bsw') msgs.push(['ok', 'Supone mezcla homogénea sin gas libre. Con gas libre aguas arriba el caudal calculado sale alto.']);
+  if (f.type === 'gas') msgs.push(['ok', 'Nm³ y Sm³ suponen comportamiento ideal (Z = 1) en condiciones de referencia.']);
+  setResult(main, alt, rows, msgs);
+
+  lastText = [
+    'Caudal placa orificio (ISO 5167-2)',
+    `D=${fmtFixed(D * 1000, 2)} mm (${pipe.label})  d=${fmtFixed(d * 1000, 2)} mm  β=${fmtFixed(r.beta, 4)}  tomas: ${TAPS[taps]}`,
+    `ΔP=${fmt(dp / 100, 5)} mbar  ${f.label}  μ=${fmt(f.mu * 1000, 4)} cP`,
+    `C=${fmtFixed(r.C, 4)}${Cfixed !== undefined ? ' (fijo)' : ''}  ε=${fmtFixed(r.eps, 5)}  Re_D=${Math.round(r.ReD)}`,
+    `qm=${fmt(r.qm * 3600, 5)} kg/h  qv=${fmt(qh, 5)} m³/h (${fmt(qh * 24, 5)} m³/d)`,
+  ].join('\n');
+}
+
+function renderSize() {
+  const pipe = readPipe();
+  const { D } = pipe;
+  const taps = $('o-taps').value;
+  const f = readFluid();
+  const dp = pa('o-dpd', 'o-dpdu');
+  const q = num('o-qd');
+  const [kind, unit] = $('o-qdu').value.split(':');
+  let qm;
+  if (kind === 'mass') qm = convert('massFlow', q, unit, 'kg/s');
+  else if (kind === 'vol') qm = convert('volFlow', q, unit, 'm3/s') * f.rho;
+  else {
+    if (f.type !== 'gas' || !f.M) return fail('Nm³/h y Sm³/h necesitan un gas con ρ1 calculada a partir de M.');
+    qm = (q / 3600) * stdDensity(f.M, unit === 'N' ? T_NORMAL : T_STANDARD);
+  }
+
+  let s;
+  try {
+    s = sizeOrifice({ D, qm, dp, rho: f.rho, mu: f.mu, taps, ...gasArgs(f) });
+  } catch (e) {
+    return fail(e.message);
+  }
+  const uC = uncertaintyC(s.beta, D * 1000, s.ReD);
+  const rows = [
+    ['β', fmtFixed(s.beta, 4)],
+    ['C', `${fmtFixed(s.C, 4)}${Number.isFinite(uC) ? ` (± ${fmt(uC, 2)} %)` : ''}`],
+  ];
+  if (f.type === 'gas') rows.push(['ε', fmtFixed(s.eps, 5)]);
+  rows.push(
+    ['Re_D', fmt(Math.round(s.ReD), 7)],
+    ['Caudal másico', `${fmt(qm * 3600, 5)} kg/h`],
+    ['Caudal a condiciones de operación', `${fmt(qm / f.rho * 3600, 5)} m³/h`],
+    ['Velocidad en tubería', `${fmt(s.velocity, 3)} m/s`],
+    ['Pérdida permanente', `${fmt(s.loss / 100, 4)} mbar (${fmtFixed(s.loss / dp * 100, 0)} % del ΔP)`],
+    ['ΔP a 50 % / 25 % del caudal', `${fmt(dp / 400, 4)} / ${fmt(dp / 1600, 4)} mbar`],
+  );
+  const msgs = validityMsgs({ D, d: s.d, ReD: s.ReD, taps, dp, p1: f.p1 });
+  if (s.beta >= 0.2 && s.beta <= 0.6) msgs.push(['ok', 'β entre 0,2 y 0,6: zona de menor incertidumbre de C.']);
+  else if (s.beta >= 0.1 && s.beta <= 0.75) msgs.push(['warn', 'β fuera de 0,2–0,6: es válido, pero C tiene más incertidumbre. Considera cambiar el ΔP de diseño.']);
+  msgs.push(['ok', 'Redondea d a la precisión de mecanizado y recalcula en «Calcular caudal» con el d real.']);
+  setResult(unitSpan(fmtFixed(s.d * 1000, 2), 'mm'), `${fmtFixed(s.d / 0.0254, 4)} in`, rows, msgs);
+
+  lastText = [
+    'Dimensionamiento placa orificio (ISO 5167-2)',
+    `D=${fmtFixed(D * 1000, 2)} mm (${pipe.label})  tomas: ${TAPS[taps]}`,
+    `Qmax=${fmt(q, 5)} ${FLOW_UNITS_DESIGN.find(([v]) => v === $('o-qdu').value)[1]}  ΔPmax=${fmt(dp / 100, 5)} mbar`,
+    `${f.label}  μ=${fmt(f.mu * 1000, 4)} cP`,
+    `d=${fmtFixed(s.d * 1000, 2)} mm (${fmtFixed(s.d / 0.0254, 4)} in)  β=${fmtFixed(s.beta, 4)}  C=${fmtFixed(s.C, 4)}  Re_D=${Math.round(s.ReD)}`,
+  ].join('\n');
+}
+
+function renderRange() {
+  const unit = $('o-qmaxu').value;
+  const qmaxIn = num('o-qmax');
+  const qmax = convert('volFlow', qmaxIn, unit, 'm3/s');
+  const dpmax = pa('o-dpmax', 'o-dpmaxu');
+  const msgs = [];
+  let dp;
+  if ($('o-src2').value === 'dp') dp = pa('o-dp2', 'o-dp2u');
+  else {
+    const r = dpFromMA('o-ma2', dpmax, 'o-out2');
+    dp = r.dp;
+    msgs.push(...r.msgs);
+  }
+  if (!Number.isFinite(dp)) return fail('Falta la lectura de ΔP o de mA.');
+  let r;
+  try {
+    r = flowFromRange({ qmax, dpmax, dp, rhoDesign: num('o-rd'), rhoActual: num('o-ra'), cutoff: num('o-cut') / 100 });
+  } catch (e) {
+    return fail(`Revisa los datos de diseño: ${e.message}.`);
+  }
+  const out = (m3s) => convert('volFlow', m3s, 'm3/s', unit);
+  const ulabel = QUANTITIES.volFlow.units[unit].label;
+  const rows = [
+    ['% de Q máx', `${fmtFixed(r.frac * 100, 1)} %`],
+    ['% de ΔP máx', `${fmtFixed(r.dpFrac * 100, 1)} %`],
+    ['Corrección por densidad', `× ${fmtFixed(r.K, 4)}`],
+    ['Q sin corregir', `${fmt(out(r.qRaw), 5)} ${ulabel}`],
+  ];
+  if (r.cut) msgs.push(['warn', `Por debajo del corte de bajo caudal (${fmt(num('o-cut'), 3)} % de Q máx): se informa 0.`]);
+  else if (r.dpFrac < 0.1) msgs.push(['warn', `ΔP en ${fmtFixed(r.dpFrac * 100, 1)} % del rango: zona de baja precisión.`]);
+  if (r.dpFrac > 1) msgs.push(['warn', 'ΔP por encima del máximo de diseño: el transmisor puede estar saturado.']);
+  if (Math.abs(r.K - 1) > 0.05) {
+    msgs.push(['warn', `La densidad real difiere más de un 10 % de la de diseño (corrección ${fmtFixed((r.K - 1) * 100, 1)} %). Conviene recalcular con ISO 5167.`]);
+  }
+  msgs.push(['ok', 'Supone C constante (el de diseño). Si la viscosidad cambió mucho, usa «Calcular caudal».']);
+  const m3h = r.q * 3600;
+  setResult(unitSpan(fmt(out(r.q), 5), ulabel), `${fmt(m3h, 5)} m³/h · ${fmt(m3h * 24, 5)} m³/d · ${fmt(m3h * 24 / BBL, 5)} bbl/d`, rows, msgs);
+
+  lastText = [
+    'Caudal desde rango de placa orificio',
+    `Qmax=${fmt(qmaxIn, 5)} ${ulabel} a ΔPmax=${fmt(dpmax / 100, 5)} mbar`,
+    `ρdiseño=${fmt(num('o-rd'), 5)}  ρreal=${fmt(num('o-ra'), 5)} kg/m³  K=${fmtFixed(r.K, 4)}`,
+    `Q=${fmt(out(r.q), 5)} ${ulabel} (${fmtFixed(r.frac * 100, 1)} % de Qmax)`,
+  ].join('\n');
+}
+
+function render() {
+  const view = $('o-main').closest('[data-view]');
+  view.querySelectorAll('.tabs [data-mode]').forEach((b) => {
+    const on = b.dataset.mode === mode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  view.querySelectorAll('[data-modes]').forEach((el) => showIf(el, el.dataset.modes.split(' ').includes(mode)));
+  const fluid = $('o-fluid').value;
+  view.querySelectorAll('[data-fluids]').forEach((el) => showIf(el, el.dataset.fluids === fluid));
+  const npsMode = $('o-Dmode').value === 'nps';
+  showIf($('o-npsBox'), npsMode);
+  showIf($('o-manBox'), !npsMode);
+  showIf($('o-dpBox'), $('o-src').value === 'dp');
+  showIf($('o-maBox'), $('o-src').value === 'ma');
+  showIf($('o-dp2Box'), $('o-src2').value === 'dp');
+  showIf($('o-ma2Box'), $('o-src2').value === 'ma');
+  showIf($('o-cfixBox'), $('o-cmode').value === 'fix');
+  const given = $('o-rhomode').value === 'given';
+  showIf($('o-rhoCalcBox'), !given);
+  showIf($('o-rho1Box'), given);
+
+  if (mode === 'flow') renderFlow();
+  else if (mode === 'size') renderSize();
+  else renderRange();
+  save();
+}
+
+// ---------------------------------------------------------------------------
+// Persistencia (solo comodidad local; la app funciona sin ella)
+// ---------------------------------------------------------------------------
+
+function save() {
+  try {
+    const o = { _mode: mode };
+    for (const id of ids) o[id] = $(id).value;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
+  } catch { /* almacenamiento no disponible */ }
+}
+
+function load() {
+  try {
+    const o = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!o) return;
+    if (['flow', 'size', 'range'].includes(o._mode)) mode = o._mode;
+    if (PIPES[o['o-nps']]) { $('o-nps').value = o['o-nps']; fillSchedules(o['o-sch']); }
+    for (const id of ids) {
+      if (id === 'o-nps' || id === 'o-sch' || o[id] === undefined) continue;
+      const el = $(id);
+      el.value = o[id];
+      if (el.tagName === 'SELECT' && el.selectedIndex < 0) el.value = defaults[id];
+    }
+  } catch { /* datos guardados corruptos: se ignoran */ }
+}
+
+// ---------------------------------------------------------------------------
+// Inicialización
+// ---------------------------------------------------------------------------
+
+function fillSchedules(prefer) {
+  const sel = $('o-sch');
+  const prev = prefer || sel.value || '40 / STD';
+  sel.innerHTML = '';
+  for (const k of schedules($('o-nps').value).keys()) sel.add(new Option(`Sch ${k}`, k));
+  sel.value = matchSchedule($('o-nps').value, prev);
+}
+
+async function copy(btn) {
+  if (!lastText) return;
+  const old = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(lastText);
+    btn.textContent = 'Copiado ✓';
+  } catch {
+    btn.textContent = 'No se pudo copiar';
+  }
+  setTimeout(() => { btn.textContent = old; }, 1500);
+}
+
+export function initOrifice() {
+  const view = $('o-main').closest('[data-view]');
+  for (const sel of view.querySelectorAll('select[data-units]')) {
+    for (const [k, u] of Object.entries(QUANTITIES[sel.dataset.units].units)) sel.add(new Option(u.label, k));
+    sel.value = sel.dataset.default;
+  }
+  for (const [v, label] of FLOW_UNITS_DESIGN) $('o-qdu').add(new Option(label, v));
+  $('o-qdu').value = 'vol:m3/h';
+  for (const k of Object.keys(PIPES)) $('o-nps').add(new Option(k, k));
+  $('o-nps').value = '3"';
+  fillSchedules('40 / STD');
+
+  ids = [...view.querySelectorAll('input, select')].map((el) => el.id).filter(Boolean);
+  for (const id of ids) defaults[id] = $(id).value;
+
+  view.querySelectorAll('.tabs [data-mode]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; render(); }));
+  // 'input' llega antes que 'change': el schedule se ajusta al NPS antes de calcular.
+  const onEdit = (e) => { if (e.target.id === 'o-nps') fillSchedules(); render(); };
+  view.addEventListener('input', onEdit);
+  view.addEventListener('change', onEdit);
+  $('o-copy').addEventListener('click', (e) => copy(e.currentTarget));
+  $('o-reset').addEventListener('click', () => {
+    for (const id of ids) if (id !== 'o-sch') $(id).value = defaults[id];
+    fillSchedules(defaults['o-sch']);
+    render();
+  });
+
+  load();
+  render();
+}

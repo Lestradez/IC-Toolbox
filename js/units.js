@@ -40,6 +40,7 @@ export const QUANTITIES = {
     units: {
       'm3/s': { label: 'm³/s', factor: 1 },
       'm3/h': { label: 'm³/h', factor: 1 / 3600 },
+      'm3/d': { label: 'm³/d', factor: 1 / 86400 },
       'L/s': { label: 'L/s', factor: 1e-3 },
       'L/min': { label: 'L/min', factor: 1e-3 / 60 },
       'L/h': { label: 'L/h', factor: 1e-3 / 3600 },
