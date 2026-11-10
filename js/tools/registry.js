@@ -6,7 +6,7 @@
 // index.html ni sw.js.
 
 /** Orden en que se muestran las categorías en el inicio. */
-export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Nivel', 'Fluidos', 'Referencias'];
+export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Nivel', 'Control', 'Fluidos', 'Referencias'];
 
 /**
  * @typedef {object} Tool
@@ -59,6 +59,14 @@ export const TOOLS = [
     category: 'Nivel',
     keywords: 'nivel transmisor presión diferencial dp delta p supresión elevación cero zero suppression elevation pierna húmeda seca wet dry leg capilar sello remoto diafragma relleno silicona tanque abierto cerrado lrv urv rango calibración densidad hidrostática altura montaje offset',
     load: () => import('./level/view.js'),
+  },
+  {
+    id: 'pid',
+    title: 'Sintonía PID',
+    desc: 'Modelo desde un escalón, Lambda, SIMC, Ziegler-Nichols, Cohen-Coon; parámetros para Logix PID/PIDE, Micro850, M221, M340',
+    category: 'Control',
+    keywords: 'pid pi sintonía sintonizar tuning lazo control ganancia kc kp ki kd ti td reset rate integral derivativa proporcional banda escalón bump test curva de reacción tiempo muerto constante de tiempo fopdt integrador nivel lambda imc simc skogestad ziegler nichols cohen coon tyreus luyben ciclo sostenido ganancia última ku pu robustez ms allen bradley rockwell controllogix compactlogix logix pide micro850 micro800 ccw schneider modicon m221 m340 pidff control expert',
+    load: () => import('./pid/view.js'),
   },
   {
     id: 'orifice',

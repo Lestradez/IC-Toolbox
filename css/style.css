@@ -290,3 +290,17 @@ button.link {
 .report-opt { display: flex; flex-direction: column; gap: 2px; min-height: 44px; padding: 12px; margin-top: 10px; color: inherit; text-decoration: none; border: 1px solid var(--border); border-radius: 8px; }
 .report-opt span { color: var(--muted); font-size: .85rem; }
 .report-close { font: inherit; min-height: 44px; width: 100%; margin-top: 10px; cursor: pointer; color: var(--muted); background: none; border: 0; }
+
+/* Gráfico de respuesta (sintonía PID) */
+.plot svg { width: 100%; height: auto; display: block; }
+.plot text { font-size: 9px; fill: var(--muted); }
+.plot polyline { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
+.plot .pv { stroke: var(--accent); }
+.plot .cv { stroke: var(--warn); stroke-width: 1.2; }
+.plot .sp { stroke: var(--muted); stroke-dasharray: 4 3; }
+.plot .ax { stroke: var(--border); }
+.plot .legend { font-size: .8rem; color: var(--muted); margin: 6px 0 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.plot .k { display: inline-block; width: 14px; height: 0; border-top: 2px solid; margin-left: 8px; }
+.plot .k.pv { border-color: var(--accent); }
+.plot .k.cv { border-color: var(--warn); }
+.plot .k.sp { border-color: var(--muted); border-top-style: dashed; }
