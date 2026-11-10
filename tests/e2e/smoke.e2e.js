@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { chromium, devices } from 'playwright';
 import { build } from '../../scripts/build.mjs';
 import { serve } from '../../scripts/serve.mjs';
+import { TOOLS } from '../../js/tools/registry.js';
 
 const ROUTES = [
   { hash: '#/', view: 'home' },
@@ -18,6 +19,7 @@ const ROUTES = [
   { hash: '#/signal', view: 'signal' },
   { hash: '#/orifice', view: 'orifice' },
   { hash: '#/temperature', view: 'temperature' },
+  { hash: '#/calibration', view: 'calibration' },
 ];
 
 let dir;
@@ -70,6 +72,9 @@ test('cada herramienta carga sin errores', async () => {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `scroll horizontal en ${r.hash}`);
   }
   assert.match(await page.textContent('#o-main'), /\d/, 'la placa orificio no muestra resultado');
+  await page.goto(base + '#/calibration');
+  await page.waitForSelector('[data-view="calibration"]:not([hidden])');
+  assert.equal(await page.textContent('#c-main'), '+0,200 % span', 'estadística de calibración');
   assert.deepEqual(errors, []);
   await context.close();
 });
@@ -118,7 +123,7 @@ test('el aviso de versión nueva actualiza la app', async () => {
 test('inicio: buscador, recientes y botón atrás', async () => {
   const { context, page, errors } = await newPage();
   await page.goto(base);
-  assert.equal(await page.locator('#catalog a.tool').count(), 4);
+  assert.equal(await page.locator('#catalog a.tool').count(), TOOLS.length);
   await page.fill('#search', 'psi');
   assert.deepEqual(await page.locator('#catalog a.tool strong').allTextContents(), ['Conversor de unidades', 'Escalado de señales']);
   await page.fill('#search', 'namur');

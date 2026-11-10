@@ -100,12 +100,16 @@ a.tool:hover, a.tool:focus-visible { border-color: var(--accent); }
 label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
 label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); margin: 8px 0 0; }
 
-input[type="text"], select {
+input[type="text"], select, textarea {
   font: inherit; font-size: 1.05rem; color: var(--text);
   background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
   padding: 10px 12px; width: 100%; min-height: 44px;
 }
-input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea { resize: vertical; line-height: 1.5; font-variant-numeric: tabular-nums; }
+fieldset.comp { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px 4px; margin: 0 0 12px; min-width: 0; }
+fieldset.comp legend { font-size: .85rem; font-weight: 600; padding: 0 4px; }
+fieldset.comp .hint { margin: 0 0 8px; }
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
 
 .results { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }

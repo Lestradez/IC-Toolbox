@@ -26,5 +26,7 @@ test('búsqueda sin acentos ni mayúsculas y con varias palabras', () => {
   assert.deepEqual(ids('kpa'), ['units']);
   assert.deepEqual(ids('pt100'), ['temperature']);
   assert.deepEqual(ids('termocupla junta fria'), ['temperature']);
+  assert.deepEqual(ids('desviacion estandar'), ['calibration']);
+  assert.deepEqual(ids('incertidumbre'), ['calibration']);
   assert.deepEqual(ids('xyz'), []);
 });

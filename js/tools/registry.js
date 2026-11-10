@@ -6,7 +6,7 @@
 // index.html ni sw.js.
 
 /** Orden en que se muestran las categorías en el inicio. */
-export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Caudal', 'Fluidos', 'Referencias'];
+export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Fluidos', 'Referencias'];
 
 /**
  * @typedef {object} Tool
@@ -43,6 +43,14 @@ export const TOOLS = [
     category: 'Sensores',
     keywords: 'temperatura rtd pt100 pt500 pt1000 ni100 ni1000 ni120 níquel platino iec 60751 callendar van dusen ohm resistencia termopar termocupla thermocouple tc mv milivoltios its-90 iec 60584 junta fría compensación cjc 2 hilos cables calibración',
     load: () => import('./temperature/view.js'),
+  },
+  {
+    id: 'calibration',
+    title: 'Estadística de calibración',
+    desc: 'Media, desviación típica, incertidumbre y error % span; error total probable (RSS)',
+    category: 'Calibración',
+    keywords: 'estadística desviación estándar típica sigma media promedio repetibilidad incertidumbre tipo a gum student error span lectura tolerancia cumple patrón calibrador error total probable tpe rss hoja de datos exactitud estabilidad url turndown efecto temperatura presión estática',
+    load: () => import('./calibration/view.js'),
   },
   {
     id: 'orifice',
