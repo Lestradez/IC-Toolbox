@@ -100,7 +100,7 @@ a.tool:hover, a.tool:focus-visible { border-color: var(--accent); }
 label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
 label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); margin: 8px 0 0; }
 
-input[type="text"], select, textarea {
+input[type="text"], input[type="date"], select, textarea {
   font: inherit; font-size: 1.05rem; color: var(--text);
   background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
   padding: 10px 12px; width: 100%; min-height: 44px;
@@ -382,3 +382,58 @@ button.link {
 .tank .line.lp { stroke: var(--warn); }
 .tank .line.dry, .tank .line.capillary { stroke-dasharray: 4 3; }
 .tank .xmtr { fill: var(--accent); }
+
+/* Planilla de calibración */
+.cs-pts { display: grid; gap: 10px; margin-bottom: 12px; }
+.cs-pt { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px 4px; }
+.cs-pt-head { margin: 0 0 6px; font-size: .85rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.cs-pt-head strong { color: var(--accent); font-size: 1rem; }
+.cs-pt-head span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.cs-pt-in { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cs-pt-in label { margin-bottom: 4px; min-width: 0; }
+.cs-pt-in input { padding: 8px; font-variant-numeric: tabular-nums; }
+.cs-pt-in .signed .sign { padding: 0 6px; }
+.cs-pt-res { margin: 2px 0 4px; font-size: .85rem; font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.cs-pt-res.ok, .cs-list .ok { color: var(--ok); }
+.cs-pt-res.warn, .cs-list .warn { color: var(--warn); }
+.cs-pt-res.bad, .cs-list .bad { color: var(--bad); }
+.cs-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 8px; }
+.cs-list { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; }
+.cs-list li:not(.hint) { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+.cs-list li.on { border-color: var(--accent); }
+.cs-list li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cs-list li > div span { font-size: .8rem; overflow-wrap: anywhere; }
+.cs-list button { font: inherit; font-size: .85rem; min-height: 44px; padding: 0 10px; cursor: pointer; color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+#cs-print { display: none; }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body.cs-printing { background: #fff; color: #000; display: block; min-height: 0; }
+  body.cs-printing > :not(#cs-print) { display: none !important; }
+  body.cs-printing #cs-print { display: block; }
+}
+.cs-report { font: 9pt/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; }
+.cs-report h1 { font-size: 15pt; margin: 0; }
+.cs-report h2 { font-size: 8.5pt; color: #0f4c5c; margin: 0 0 4px; letter-spacing: .04em; }
+.cs-r-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; border-bottom: 2px solid #0f4c5c; padding-bottom: 6px; margin-bottom: 10px; }
+.cs-r-sub { margin: 0; font-weight: 600; }
+.cs-r-verdict { margin: 0 0 0 auto; font-weight: 700; font-size: 11pt; }
+.cs-report .ok { color: #1d7a46; }
+.cs-report .warn { color: #9a6400; }
+.cs-report .bad { color: #b3261e; }
+.cs-r-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-bottom: 10px; }
+.cs-r-block table { width: 100%; border-collapse: collapse; }
+.cs-r-block th, .cs-r-block td { text-align: left; vertical-align: top; padding: 1px 4px; border-bottom: 1px solid #ccc; }
+.cs-r-block th { width: 40%; font-weight: 600; color: #444; }
+.cs-r-series { margin-bottom: 10px; break-inside: avoid; }
+.cs-r-pts { width: 100%; border-collapse: collapse; }
+.cs-r-pts th, .cs-r-pts td { border: 1px solid #999; padding: 2px 4px; }
+.cs-r-pts th { background: #e2eef1; font-size: 8pt; text-align: center; }
+.cs-r-pts td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cs-r-pts td.ok, .cs-r-pts td.warn, .cs-r-pts td.bad { font-weight: 600; white-space: nowrap; }
+.cs-r-max { margin: 3px 0 0; }
+.cs-r-notes ul { margin: 0; padding-left: 16px; }
+.cs-r-pre { white-space: pre-wrap; margin: 0; }
+.cs-r-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; break-inside: avoid; }
+.cs-r-sign div { border-top: 1px solid #000; padding-top: 4px; text-align: center; }
+.cs-r-foot { margin-top: 16px; color: #666; font-size: 7.5pt; }

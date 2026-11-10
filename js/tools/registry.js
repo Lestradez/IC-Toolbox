@@ -59,6 +59,15 @@ export const TOOLS = [
     help: () => import('./calibration/help.js'),
   },
   {
+    id: 'calsheet',
+    title: 'Planilla de calibración',
+    desc: 'As found / as left, subida y bajada, error % span, histéresis; guarda y exporta a Excel o PDF',
+    category: 'Calibración',
+    keywords: 'planilla hoja registro certificado informe protocolo calibración verificación as found as left como se encontró dejó subida bajada ascendente descendente histéresis error span tolerancia cumple no cumple patrón incertidumbre tur tag transmisor manómetro indicador 4-20 ma puntos excel xlsx pdf imprimir exportar guardar',
+    load: () => import('./calsheet/view.js'),
+    help: () => import('./calsheet/help.js'),
+  },
+  {
     id: 'level',
     title: 'Nivel por ΔP',
     desc: 'LRV y URV con supresión o elevación de cero: pierna seca/húmeda, sellos remotos',
