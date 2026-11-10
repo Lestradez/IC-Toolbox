@@ -159,3 +159,47 @@ test('recuerda los datos y el tema al volver a abrir', async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('campo: barra de resultado, botón ±, error visible y deshacer', async () => {
+  const { context, page, errors } = await newPage();
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto(base + '#/orifice');
+  await visibleView(page, 'orifice');
+
+  // Arriba del todo el resultado no se ve: la barra fija lo muestra.
+  const bar = page.locator('section[data-view="orifice"] .result-bar');
+  await bar.waitFor({ state: 'visible' });
+  assert.equal(await bar.locator('.v').textContent(), (await page.textContent('#o-main')).trim());
+  await page.fill('#o-d', '45');
+  await page.waitForFunction(() => document.querySelector('.result-bar .v').textContent.startsWith('2'));
+  await bar.click();
+  await bar.waitFor({ state: 'hidden' });
+
+  // Valores de ejemplo con deshacer.
+  await page.click('#o-reset');
+  assert.equal(await page.inputValue('#o-d'), '40');
+  await page.click('#toast button');
+  assert.equal(await page.inputValue('#o-d'), '45');
+
+  // Botón ± en un campo que admite negativos.
+  await page.goto(base + '#/units');
+  await visibleView(page, 'units');
+  await page.selectOption('#u-quantity', 'temperature');
+  await page.selectOption('#u-from', 'C');
+  await page.fill('#u-value', '40');
+  await page.click('section[data-view="units"] .sign');
+  assert.equal(await page.inputValue('#u-value'), '-40');
+  assert.match(await page.textContent('#u-results'), /-40\s*°F/);
+
+  // Número mal escrito: se explica, no se queda en blanco.
+  await page.fill('#u-value', '1.000,5');
+  assert.equal(await page.isVisible('#u-error'), true);
+
+  // Tocar una fila copia el valor.
+  await page.fill('#u-value', '100');
+  await page.click('#u-results tr:nth-child(2)');
+  await page.waitForFunction(() => /Copiado: 212/.test(document.getElementById('toast').textContent));
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '212');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

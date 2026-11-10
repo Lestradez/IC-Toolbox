@@ -52,6 +52,20 @@ test('todo lo que referencian index.html y el manifest está en precache', async
   for (const icon of manifest.icons) assert.ok(precache.has(`./${icon.src}`), `falta ${icon.src}`);
 });
 
+test('atajos y capturas del manifest apuntan a algo que existe', async () => {
+  const manifest = JSON.parse(await readFile(join(out, 'manifest.webmanifest'), 'utf8'));
+  const { TOOLS } = await import('../js/tools/registry.js');
+  for (const s of manifest.shortcuts) {
+    const id = s.url.replace(/^\.\/#\//, '');
+    assert.ok(TOOLS.some((t) => t.id === id), `atajo a una herramienta que no existe: ${s.url}`);
+  }
+  for (const s of manifest.screenshots) {
+    const png = await readFile(join(out, s.src));
+    const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    assert.equal(`${w}x${h}`, s.sizes, `${s.src} mide ${w}x${h}`);
+  }
+});
+
 test('no se publica nada fuera de la app', () => {
   for (const p of precache) assert.doesNotMatch(p, /^\.\/(tests|scripts|node_modules|\.github)\//);
 });

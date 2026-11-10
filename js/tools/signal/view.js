@@ -3,15 +3,16 @@ import {
   mAToPercent, percentToMA, percentToPV, pvToPercent, namurStatus,
 } from '../../units.js';
 import { parseNum, fmt, $, loadState, saveState } from '../../ui.js';
+import { enhanceSigned } from '../../components.js';
 
 const TEMPLATE = `
   <div class="card">
     <div class="row">
       <label>LRV (0 %)
-        <input id="s-lrv" type="text" inputmode="decimal" value="0">
+        <input id="s-lrv" type="text" inputmode="decimal" data-signed value="0">
       </label>
       <label>URV (100 %)
-        <input id="s-urv" type="text" inputmode="decimal" value="100">
+        <input id="s-urv" type="text" inputmode="decimal" data-signed value="100">
       </label>
       <label>Unidad
         <input id="s-unit" type="text" value="kPa" maxlength="12">
@@ -29,10 +30,10 @@ const TEMPLATE = `
         <input id="s-pct" type="text" inputmode="decimal">
       </label>
       <label>Valor de proceso <span id="s-unit-label"></span>
-        <input id="s-pv" type="text" inputmode="decimal">
+        <input id="s-pv" type="text" inputmode="decimal" data-signed>
       </label>
     </div>
-    <p id="s-status" class="status"></p>
+    <p id="s-status" class="status" aria-live="polite"></p>
     <p id="s-error" class="error" hidden></p>
   </div>
   <table class="results">
@@ -46,6 +47,7 @@ const SOURCES = { ma: 's-ma', pct: 's-pct', pv: 's-pv' };
 
 export function mount(section) {
   section.innerHTML = TEMPLATE;
+  enhanceSigned(section);
   const sMa = $('s-ma');
   const sPct = $('s-pct');
   const sPv = $('s-pv');
@@ -78,7 +80,13 @@ export function mount(section) {
     else if (source === 'pct') pct = parseNum(sPct.value);
     else pct = pvToPercent(parseNum(sPv.value), lrv, urv, sqrt);
 
-    if (Number.isNaN(pct)) return;
+    if (Number.isNaN(pct)) {
+      if ($(SOURCES[source]).value.trim()) {
+        err.textContent = 'Número no válido. Usa coma o punto decimal, sin separador de miles.';
+        err.hidden = false;
+      }
+      return;
+    }
     const mA = percentToMA(pct);
     if (source !== 'ma') sMa.value = fmt(mA);
     if (source !== 'pct') sPct.value = fmt(pct);

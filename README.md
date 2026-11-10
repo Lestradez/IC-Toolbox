@@ -53,7 +53,12 @@ No hay que tocar versiones a mano para que los móviles se actualicen: cualquier
 una versión nueva, que se descarga en segundo plano y se activa cuando el usuario pulsa
 «Actualizar». Sube `version` en `package.json` solo para nombrar la release.
 
-Los iconos se regeneran con `python3 scripts/make_icons.py` (requiere Pillow).
+Los iconos se regeneran con `python3 scripts/make_icons.py` (requiere Pillow) y las capturas
+del manifest con `node scripts/make_screenshots.mjs` (requiere Playwright).
+
+Piezas de interfaz compartidas en `js/components.js`: tarjeta de resultado con barra fija
+(`resultCardHTML` + `bindResultCard`), botón ± para negativos (`<input data-signed>` +
+`enhanceSigned`), copiar al portapapeles y avisos con «Deshacer» (`toast`).
 
 ## Licencia
 
