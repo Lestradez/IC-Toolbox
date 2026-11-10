@@ -4,6 +4,7 @@ import { CONFIGS, DENSITY_UNITS, densityToKgM3, levelRange } from '../../level.j
 import { QUANTITIES, convert } from '../../units.js';
 import { parseNum, fmt, fmtFixed, $, loadState, saveState } from '../../ui.js';
 import { resultCardHTML, bindResultCard, enhanceSigned, toast } from '../../components.js';
+import { mountPicker } from '../densities/picker.js';
 
 const options = (map, def) => Object.entries(map)
   .map(([k, v]) => `<option value="${k}"${k === def ? ' selected' : ''}>${v.label}</option>`).join('');
@@ -33,6 +34,7 @@ const TEMPLATE = `
       <label>Densidad del líquido ${num('l-rho', '0,9')}</label>
       <label>Unidad <select id="l-dunit">${options(DENSITY_UNITS, 'SG')}</select></label>
     </div>
+    <div data-pick="rho"></div>
   </div>
 
   <div class="card" id="l-inst">
@@ -42,6 +44,7 @@ const TEMPLATE = `
     <label data-need="taps">Distancia entre tomas (HP a LP) ${num('l-taps', '1700')}</label>
     <label data-need="fillHP"><span id="l-fill-label">Densidad del relleno del capilar</span> ${num('l-fill', '0,93')}</label>
     <label data-need="ref">Densidad de la pierna húmeda ${num('l-ref', '1')}</label>
+    <div data-need="ref" data-pick="ref"></div>
     <p class="hint">Las densidades de relleno y de pierna usan la misma unidad que la del líquido.
       Las densidades cambian con la temperatura: usa la de operación.</p>
   </div>
@@ -181,6 +184,16 @@ export function mount(section) {
 
   ids = [...section.querySelectorAll('input, select')].map((el) => el.id).filter(Boolean);
   for (const id of ids) defaults[id] = $(id).value;
+
+  // «Elegir de la tabla»: escribe la densidad en la unidad que esté elegida y recalcula.
+  const fill = (fieldId) => (r) => {
+    const field = $(fieldId);
+    field.value = fmt(r.rho / DENSITY_UNITS[$('l-dunit').value].factor, 6);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    return `${field.value} ${DENSITY_UNITS[$('l-dunit').value].label} ✓`;
+  };
+  mountPicker(section.querySelector('[data-pick="rho"]'), { id: 'l-pick-rho', kind: 'liquid', def: 'crude', apply: fill('l-rho') });
+  mountPicker(section.querySelector('[data-pick="ref"]'), { id: 'l-pick-ref', kind: 'liquid', def: 'water', apply: fill('l-ref') });
 
   section.addEventListener('input', render);
   section.addEventListener('change', render);

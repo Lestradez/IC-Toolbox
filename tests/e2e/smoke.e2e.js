@@ -22,6 +22,7 @@ const ROUTES = [
   { hash: '#/calibration', view: 'calibration' },
   { hash: '#/level', view: 'level' },
   { hash: '#/pid', view: 'pid' },
+  { hash: '#/densities', view: 'densities' },
 ];
 
 let dir;
@@ -80,6 +81,49 @@ test('cada herramienta carga sin errores', async () => {
   await page.goto(base + '#/level');
   await page.waitForSelector('[data-view="level"]:not([hidden])');
   assert.match(await page.textContent('#l-main'), /^-166,713 … -34,3233 mbar$/, 'nivel por ΔP');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('densidades: la herramienta y el selector «elegir de la tabla» de nivel y placa orificio', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base + '#/densities');
+  await page.waitForSelector('[data-view="densities"]:not([hidden])');
+  assert.equal(await page.textContent('#d-main'), '998,21 kg/m³', 'agua a 20 °C');
+  await page.click('[data-mode="gas"]');
+  await page.selectOption('#d-gref', 'a');
+  assert.equal(await page.textContent('#d-main'), '1,1891 kg/m³', 'aire a 20 °C y 1 bar abs');
+  await page.click('[data-mode="steam"]');
+  await page.fill('#d-sp', '1');
+  await page.selectOption('#d-sref', 'a');
+  assert.match(await page.textContent('#d-alt'), /99,61 °C/, 'vapor saturado a 1 bar abs');
+
+  // Nivel: el selector escribe ρ en la unidad elegida (SG) y el rango se recalcula.
+  await page.goto(base + '#/level');
+  await page.waitForSelector('[data-view="level"]:not([hidden])');
+  const before = await page.textContent('#l-main');
+  await page.click('#l-pick-rho > summary');
+  await page.selectOption('#l-pick-rho-fluid', 'water');
+  await page.click('#l-pick-rho-use');
+  assert.equal(await page.inputValue('#l-rho'), '0,99821');
+  assert.notEqual(await page.textContent('#l-main'), before);
+
+  // Placa orificio, líquido: ρ y μ del agua a 20 °C.
+  await page.goto(base + '#/orifice');
+  await page.waitForSelector('[data-view="orifice"]:not([hidden])');
+  await page.click('#o-pick-liq > summary');
+  await page.selectOption('#o-pick-liq-fluid', 'ethanol');
+  await page.click('#o-pick-liq-use');
+  assert.match(await page.inputValue('#o-rho'), /^789,/);
+  assert.match(await page.inputValue('#o-mu'), /^1,19/);
+  // Gas: M, κ y Z con p1 y T1 del formulario.
+  await page.selectOption('#o-fluid', 'gas');
+  await page.click('#o-pick-gas > summary');
+  await page.selectOption('#o-pick-gas-fluid', 'methane');
+  await page.click('#o-pick-gas-use');
+  assert.match(await page.inputValue('#o-M'), /^16,04/);
+  assert.match(await page.inputValue('#o-Z'), /^0,9\d/);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'scroll horizontal');
   assert.deepEqual(errors, []);
   await context.close();
 });

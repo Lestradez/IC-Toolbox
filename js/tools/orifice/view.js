@@ -7,6 +7,7 @@ import { PIPES, pipeID, schedules, matchSchedule } from '../../pipes.js';
 import { QUANTITIES, convert, mAToPercent, namurStatus } from '../../units.js';
 import { parseNum, fmt, fmtFixed, $ } from '../../ui.js';
 import { resultCardHTML, bindResultCard, enhanceSigned, toast } from '../../components.js';
+import { mountPicker } from '../densities/picker.js';
 
 const TEMPLATE = `
   <div class="tabs" role="tablist" aria-label="Modo de cálculo">
@@ -99,11 +100,14 @@ const TEMPLATE = `
     <div class="row" data-fluids="liq">
       <label>ρ a T de operación (kg/m³) <input id="o-rho" type="text" inputmode="decimal" value="998,2"></label>
     </div>
+    <div data-fluids="liq" data-pick="liq"></div>
     <div class="row" data-fluids="bsw">
       <label>BSW (% agua) <input id="o-bsw" type="text" inputmode="decimal" value="60"></label>
       <label>ρ crudo (kg/m³) <input id="o-ro" type="text" inputmode="decimal" value="850"></label>
       <label>ρ agua (kg/m³) <input id="o-rw" type="text" inputmode="decimal" value="1050"></label>
     </div>
+    <div data-fluids="bsw" data-pick="ro"></div>
+    <p class="hint" data-fluids="bsw">La tabla no trae agua de formación salada: usa la ρ medida.</p>
     <div data-fluids="gas">
       <div class="row">
         <label>p1 aguas arriba
@@ -125,6 +129,7 @@ const TEMPLATE = `
         <label>Z a p1, T1 <input id="o-Z" type="text" inputmode="decimal" value="0,98"></label>
       </div>
       <label id="o-rho1Box">ρ1 a p1, T1 (kg/m³) <input id="o-rho1" type="text" inputmode="decimal" value="5,16"></label>
+      <div data-pick="gas"></div>
       <p class="hint">Manométrica: se suma 1,01325 bar. Aire: M = 28,96, κ = 1,40 · Gas natural: M ≈ 17–20, κ ≈ 1,27–1,31 · Vapor sobrecalentado: κ ≈ 1,3, ρ1 de tablas.
       Nm³ y Sm³ solo se calculan con ρ1 calculada (necesitan M).</p>
     </div>
@@ -600,6 +605,48 @@ export function mount(section) {
     });
   });
 
+  mountPickers(view);
+
   load();
   render();
+}
+
+/** Escribe `value` en un campo y avisa a la vista para que recalcule. */
+function setField(id, value) {
+  $(id).value = value;
+  $(id).dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** T1 (K) y p1 (Pa abs) del formulario del gas, para calcular Z con la tabla. */
+function gasContext() {
+  const T = num('o-T') + 273.15;
+  const p = pa('o-p1', 'o-p1u') + ($('o-p1ref').value === 'g' ? P_STD : 0);
+  if (!(T > 0) || !(p > 0)) throw new RangeError('Rellena p1 y T1 arriba para calcular Z.');
+  return { T, p };
+}
+
+/** «Elegir de la tabla» junto a los campos de densidad. Van después de reunir los ids: no se guardan con el estado. */
+function mountPickers(view) {
+  const host = (k) => view.querySelector(`[data-pick="${k}"]`);
+  mountPicker(host('liq'), {
+    id: 'o-pick-liq', kind: 'liquid', apply: (r) => {
+      setField('o-rho', fmt(r.rho, 6));
+      if (r.mu !== null) setField('o-mu', fmt(r.mu, 4));
+      return r.mu !== null ? 'ρ y μ aplicadas ✓' : 'ρ aplicada ✓ (sin μ: revísala)';
+    },
+  });
+  mountPicker(host('ro'), {
+    id: 'o-pick-ro', kind: 'liquid', def: 'crude', summary: 'Elegir el crudo de la tabla',
+    apply: (r) => { setField('o-ro', fmt(r.rho, 6)); return 'ρ crudo aplicada ✓'; },
+  });
+  mountPicker(host('gas'), {
+    id: 'o-pick-gas', kind: 'gas', section: view, context: gasContext,
+    apply: (r) => {
+      $('o-rhomode').value = 'calc';
+      setField('o-M', fmt(r.M, 6));
+      setField('o-k', fmt(r.kappa, 4));
+      setField('o-Z', fmt(r.Z, 4));
+      return 'M, κ y Z aplicadas ✓';
+    },
+  });
 }

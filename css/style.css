@@ -178,6 +178,18 @@ h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: 
 }
 .actions button:hover { border-color: var(--accent); }
 
+/* «Elegir de la tabla» junto a un campo de densidad */
+.dpick { margin: -2px 0 12px; }
+.dpick summary { cursor: pointer; color: var(--accent); font-size: .9rem; min-height: 44px; display: flex; align-items: center; }
+.dpick-body { border: 1px solid var(--border); border-radius: 8px; padding: 12px 12px 4px; background: var(--bg); }
+.dpick-out { font-size: .9rem; margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+.dpick-out.bad { color: var(--bad); }
+.dpick-use {
+  font: inherit; font-size: .9rem; width: 100%; min-height: 44px; margin-bottom: 8px; cursor: pointer;
+  color: var(--on-accent); background: var(--accent); border: 0; border-radius: 8px;
+}
+.dpick-use:disabled { opacity: .5; cursor: not-allowed; }
+
 details.note { margin-bottom: 16px; }
 details.note summary { cursor: pointer; }
 

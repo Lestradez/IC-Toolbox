@@ -16,7 +16,7 @@ y escritorio y funciona sin conexión.
 | RTD (Pt100/500/1000 IEC 60751, Ni100/Ni1000 DIN 43760, Ni120) y termopares J, K, T, E, N, R, S, B (ITS-90): °C ↔ Ω / mV, cables a 2 hilos, junta fría y puntos de calibración | ✅ |
 | Nivel por ΔP: LRV y URV con supresión o elevación de cero (tanque abierto/cerrado, pierna seca o húmeda, sellos remotos, transmisor por debajo de la toma), tabla de puntos con mA | ✅ |
 | Sintonía PID: modelo desde una prueba de escalón (autorregulado o integrador), modelo conocido o ciclo sostenido; reglas Lambda/IMC, SIMC, Ziegler-Nichols, Cohen-Coon, Tyreus-Luyben; robustez (Ms, márgenes) y respuesta simulada; parámetros en las unidades de Logix PID/PIDE, Micro800, M221 y M340 | ✅ |
-| Tablas de densidades | Pendiente |
+| Densidades de fluidos: agua, disolventes, gases licuados, glicoles, petróleo y derivados (°API, API 11.1), gases (Peng-Robinson) y vapor saturado; densidad y viscosidad según la temperatura, y selector «elegir de la tabla» en Nivel por ΔP y Placa orificio. Datos de CoolProp (`scripts/densities_reference.py`) | ✅ |
 
 > Las herramientas son de apoyo. Verifica los resultados críticos contra la norma
 > o el software de cálculo validado de tu planta.
