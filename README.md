@@ -11,7 +11,7 @@ y escritorio y funciona sin conexión.
 | Herramienta | Estado |
 |---|---|
 | Conversor de unidades (presión, temperatura, caudal volumétrico y másico, nivel) | ✅ |
-| Señal 4-20 mA ↔ % ↔ valor de proceso, raíz cuadrada, NAMUR NE 43 | ✅ |
+| Escalado de señales: 4-20 mA, 0-10 V, 3-15 psi… (presets) o cualquier magnitud/unidad ↔ %, raíz cuadrada, NAMUR NE 43 | ✅ |
 | Placa orificio ISO 5167-2: caudal (líquido, crudo + agua, gas con ε), dimensionamiento de d, caudal desde rango | ✅ |
 | Tablas de densidades | Pendiente |
 

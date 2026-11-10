@@ -21,6 +21,8 @@ test('búsqueda sin acentos ni mayúsculas y con varias palabras', () => {
   assert.deepEqual(ids('SENAL'), ['signal']);
   assert.deepEqual(ids('raiz'), ['signal']);
   assert.deepEqual(ids('caudal placa'), ['orifice']);
-  assert.deepEqual(ids('psi'), ['units']);
+  assert.deepEqual(ids('psi'), ['units', 'signal']);
+  assert.deepEqual(ids('0-10v'), ['signal']);
+  assert.deepEqual(ids('kpa'), ['units']);
   assert.deepEqual(ids('xyz'), []);
 });

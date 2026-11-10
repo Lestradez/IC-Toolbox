@@ -30,10 +30,10 @@ export const TOOLS = [
   },
   {
     id: 'signal',
-    title: 'Señal 4-20 mA',
-    desc: 'mA ↔ % ↔ valor de proceso, raíz cuadrada, NAMUR NE 43',
+    title: 'Escalado de señales',
+    desc: '4-20 mA, 0-10 V, 3-15 psi… ↔ % ↔ cualquier unidad; raíz cuadrada, NAMUR',
     category: 'Señales',
-    keywords: 'corriente ma porcentaje lrv urv rango calibración raíz cuadrada namur ne43 transmisor lazo',
+    keywords: 'escalado escalar 4-20 0-10v 1-5v 3-15psi neumática tensión volt pf capacidad corriente ma porcentaje lrv urv rango calibración raíz cuadrada namur ne43 transmisor lazo',
     load: () => import('./signal/view.js'),
   },
   {

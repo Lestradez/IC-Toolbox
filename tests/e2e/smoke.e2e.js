@@ -118,15 +118,15 @@ test('inicio: buscador, recientes y botón atrás', async () => {
   await page.goto(base);
   assert.equal(await page.locator('#catalog a.tool').count(), 3);
   await page.fill('#search', 'psi');
-  assert.deepEqual(await page.locator('#catalog a.tool strong').allTextContents(), ['Conversor de unidades']);
+  assert.deepEqual(await page.locator('#catalog a.tool strong').allTextContents(), ['Conversor de unidades', 'Escalado de señales']);
   await page.fill('#search', 'namur');
   await page.press('#search', 'Enter');
   assert.deepEqual(await visibleView(page, 'signal'), ['signal']);
-  assert.equal(await page.textContent('#title'), 'Señal 4-20 mA');
+  assert.equal(await page.textContent('#title'), 'Escalado de señales');
   await page.click('#back');
   assert.deepEqual(await visibleView(page, 'home'), ['home']);
   await page.fill('#search', '');
-  assert.deepEqual(await page.locator('#recent a.chip strong').allTextContents(), ['Señal 4-20 mA']);
+  assert.deepEqual(await page.locator('#recent a.chip strong').allTextContents(), ['Escalado de señales']);
   await page.fill('#search', 'zzz');
   assert.equal(await page.isVisible('#no-results'), true);
   assert.deepEqual(errors, []);
@@ -142,13 +142,13 @@ test('recuerda los datos y el tema al volver a abrir', async () => {
   await page.fill('#u-value', '-40');
   await page.goto(base + '#/signal');
   await visibleView(page, 'signal');
-  await page.fill('#s-urv', '250');
-  await page.fill('#s-ma', '20');
+  await page.fill('#s-b-hi', '250');
+  await page.fill('#s-in', '20');
   await page.selectOption('#theme', 'dark');
 
   await page.reload();
   await visibleView(page, 'signal');
-  assert.equal(await page.inputValue('#s-pv'), '250');
+  assert.equal(await page.inputValue('#s-out'), '250');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
   assert.equal(await page.inputValue('#theme'), 'dark');
   await page.goto(base + '#/units');
@@ -200,6 +200,38 @@ test('campo: barra de resultado, botón ±, error visible y deshacer', async () 
   await page.click('#u-results tr:nth-child(2)');
   await page.waitForFunction(() => /Copiado: 212/.test(document.getElementById('toast').textContent));
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '212');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('escalado de señales: presets, cambio de unidad y raíz cuadrada', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base + '#/signal');
+  await visibleView(page, 'signal');
+  // por defecto 4-20 mA -> 0-100 kPa con 12 mA
+  assert.equal(await page.inputValue('#s-out'), '50');
+  assert.equal(await page.inputValue('#s-a-preset'), '4-20mA');
+  // preset de tensión en la entrada
+  await page.selectOption('#s-a-preset', '0-10V');
+  await page.fill('#s-in', '5');
+  assert.equal(await page.inputValue('#s-out'), '50');
+  assert.equal(await page.inputValue('#s-pct'), '50');
+  // salida en psi: el rango se convierte (0-100 kPa -> 0-14,5038 psi)
+  await page.selectOption('#s-b-unit', 'psi');
+  assert.match(await page.inputValue('#s-b-hi'), /^14[.,]5/);
+  assert.equal(await page.inputValue('#s-pct'), '50');
+  // salida neumática estándar 3-15 psi
+  await page.selectOption('#s-b-preset', '3-15psi');
+  assert.equal(await page.inputValue('#s-out'), '9');
+  // magnitud libre + raíz cuadrada
+  await page.selectOption('#s-b-qty', 'custom');
+  await page.fill('#s-b-custom', 'm3/h');
+  await page.fill('#s-b-lo', '0');
+  await page.fill('#s-b-hi', '100');
+  await page.check('#s-sqrt');
+  await page.fill('#s-pct', '25');
+  assert.equal(await page.inputValue('#s-out'), '50');
+  assert.equal(await page.isVisible('#s-b-custom'), true);
   assert.deepEqual(errors, []);
   await context.close();
 });
