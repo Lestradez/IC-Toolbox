@@ -21,6 +21,7 @@ const ROUTES = [
   { hash: '#/temperature', view: 'temperature' },
   { hash: '#/calibration', view: 'calibration' },
   { hash: '#/level', view: 'level' },
+  { hash: '#/pid', view: 'pid' },
 ];
 
 let dir;
