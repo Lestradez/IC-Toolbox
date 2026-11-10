@@ -20,6 +20,7 @@ const ROUTES = [
   { hash: '#/orifice', view: 'orifice' },
   { hash: '#/temperature', view: 'temperature' },
   { hash: '#/calibration', view: 'calibration' },
+  { hash: '#/level', view: 'level' },
 ];
 
 let dir;
@@ -75,6 +76,9 @@ test('cada herramienta carga sin errores', async () => {
   await page.goto(base + '#/calibration');
   await page.waitForSelector('[data-view="calibration"]:not([hidden])');
   assert.equal(await page.textContent('#c-main'), '+0,200 % span', 'estadística de calibración');
+  await page.goto(base + '#/level');
+  await page.waitForSelector('[data-view="level"]:not([hidden])');
+  assert.match(await page.textContent('#l-main'), /^-166,713 … -34,3233 mbar$/, 'nivel por ΔP');
   assert.deepEqual(errors, []);
   await context.close();
 });
