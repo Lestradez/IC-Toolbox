@@ -9,7 +9,7 @@ export const help = {
     ['Ciclo sostenido', 'Ganancia última Ku y periodo último Pu, de subir solo la ganancia proporcional hasta que la PV oscile con amplitud constante.'],
     ['Regla y controlador', 'Lambda, SIMC, Ziegler-Nichols o Cohen-Coon (o Tyreus-Luyben con ciclo sostenido), y P, PI o PID.'],
     ['λ (constante de lazo cerrado)', 'Cuán rápido quieres el lazo: más pequeña = más rápido y menos robusto. El valor por defecto es una referencia prudente.'],
-    ['Bloque de destino', 'PLC e instrucción: Logix PID/PIDE, Micro800, M221, M340 o genérico. Convierte Kc, Ti y Td a las unidades de ese bloque.'],
+    ['Bloque de destino', 'PLC e instrucción: Logix PID/PIDE, Micro800, M221, M340 o genérico. Convierte Kc, Ti y Td a las unidades de ese bloque y muestra siempre P, I y D con el nombre del parámetro de tu PLC, listas para cargar o copiar (con punto decimal).'],
   ],
   example: {
     title: 'Sintonía SIMC de un lazo de temperatura',
@@ -18,7 +18,7 @@ export const help = {
       'Regla SIMC, controlador PI; λ por defecto (= θ = 10 s).',
       'Bloque de destino: genérico ideal (ISA).',
     ],
-    result: 'Kc = 1,5, Ti = 45 s. Lleva Kc, Ti y Td al PLC en las unidades que indica la herramienta y compara la simulación con la respuesta real del lazo.',
+    result: 'Kc = 1,5, Ti = 45 s. En «Constantes para cargar» salen P, I y D en las unidades de tu bloque (con el motivo si I o D quedan en 0, p. ej. por elegir PI); compara la simulación con la respuesta real del lazo.',
   },
   limits: [
     'El modelo es de primer orden con tiempo muerto (o integrador con tiempo muerto): procesos muy oscilatorios o con respuesta inversa no se describen bien.',
