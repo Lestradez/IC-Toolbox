@@ -8,4 +8,4 @@ export const REPO = 'Lestradez/IC-Toolbox';
  * apagadas: la app no envía nada. Es público por diseño (va en el código de cualquier
  * página que use GoatCounter), no es un secreto.
  */
-export const GOATCOUNTER_CODE = '';
+export const GOATCOUNTER_CODE = 'lestradez';

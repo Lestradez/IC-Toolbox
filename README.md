@@ -29,7 +29,7 @@ y escritorio y funciona sin conexión.
 
 ## Estadísticas y reportes
 
-- **Uso anónimo** con [GoatCounter](https://www.goatcounter.com) (sin cookies ni identificadores): cuenta qué herramientas se abren y los errores de JavaScript. Nunca se envían los valores de las calculadoras. Está apagado hasta poner el código del sitio en `js/config.js` (`GOATCOUNTER_CODE`), y solo funciona en el sitio publicado, no en localhost. El usuario puede desactivarlo en el pie, y se respeta «No rastrear». Sin conexión los envíos se guardan en una cola y salen al volver.
+- **Uso anónimo** con [GoatCounter](https://www.goatcounter.com) (sin cookies ni identificadores): cuenta qué herramientas se abren y los errores de JavaScript. Nunca se envían los valores de las calculadoras. El código del sitio está en `js/config.js` (`GOATCOUNTER_CODE`), y solo funciona en el sitio publicado, no en localhost. El usuario puede desactivarlo en el pie, y se respeta «No rastrear». Sin conexión los envíos se guardan en una cola y salen al volver.
 - **Reportar un problema**: enlace en el pie que abre un issue de GitHub con la herramienta, la versión y el navegador ya rellenados.
 
 ## Desarrollo local

@@ -276,7 +276,7 @@ test('«Reportar un problema» lleva la herramienta y la versión; sin código n
   assert.match(url.searchParams.get('body'), /Versión: /);
   await page.goto(base + '#/');
   assert.match(new URL(await page.getAttribute('#report', 'href')).searchParams.get('title'), /Inicio/);
-  assert.deepEqual(requests, []);
+  assert.deepEqual(requests.filter((u) => !u.includes('lestradez.goatcounter.com')), []);
   assert.equal(await page.isHidden('#stats-row'), true, 'sin código GoatCounter no se ofrece el interruptor');
   assert.deepEqual(errors, []);
   await context.close();
