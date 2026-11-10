@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>I&amp;C Toolbox</title>
+  <meta name="description" content="Navaja suiza offline para instrumentistas: conversiones de unidades, señales 4-20 mA y más.">
+  <meta name="theme-color" content="#0f4c5c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="brand" aria-label="Inicio">
+      <img src="icons/icon-192.png" alt="" width="28" height="28">
+      <span>I&amp;C Toolbox</span>
+    </a>
+    <span id="net" class="net" hidden>Sin conexión</span>
+  </header>
+
+  <main id="app">
+    <!-- Inicio -->
+    <section data-view="home">
+      <h1>Herramientas</h1>
+      <nav class="tools">
+        <a class="tool" href="#/units">
+          <strong>Conversor de unidades</strong>
+          <span>Presión, temperatura, caudal, nivel</span>
+        </a>
+        <a class="tool" href="#/signal">
+          <strong>Señal 4-20 mA</strong>
+          <span>mA ↔ % ↔ valor de proceso, raíz cuadrada, NAMUR NE 43</span>
+        </a>
+        <div class="tool soon">
+          <strong>Placa orificio (ISO 5167)</strong>
+          <span>Próximamente</span>
+        </div>
+        <div class="tool soon">
+          <strong>Tablas de densidades</strong>
+          <span>Próximamente</span>
+        </div>
+      </nav>
+    </section>
+
+    <!-- Conversor -->
+    <section data-view="units" hidden>
+      <h1>Conversor de unidades</h1>
+      <div class="card">
+        <label>Magnitud
+          <select id="u-quantity"></select>
+        </label>
+        <div class="row">
+          <label>Valor
+            <input id="u-value" type="text" inputmode="decimal" value="1" autocomplete="off">
+          </label>
+          <label>Unidad
+            <select id="u-from"></select>
+          </label>
+        </div>
+        <p id="u-error" class="error" hidden></p>
+      </div>
+      <table class="results">
+        <tbody id="u-results"></tbody>
+      </table>
+      <p id="u-note" class="note"></p>
+    </section>
+
+    <!-- Señal -->
+    <section data-view="signal" hidden>
+      <h1>Señal 4-20 mA</h1>
+      <div class="card">
+        <div class="row">
+          <label>LRV (0 %)
+            <input id="s-lrv" type="text" inputmode="decimal" value="0">
+          </label>
+          <label>URV (100 %)
+            <input id="s-urv" type="text" inputmode="decimal" value="100">
+          </label>
+          <label>Unidad
+            <input id="s-unit" type="text" value="kPa" maxlength="12">
+          </label>
+        </div>
+        <label class="check"><input id="s-sqrt" type="checkbox"> Extracción de raíz cuadrada (caudal por ΔP)</label>
+      </div>
+      <div class="card">
+        <p class="hint">Escribe en cualquiera de los tres campos; los otros se recalculan.</p>
+        <div class="row">
+          <label>Corriente (mA)
+            <input id="s-ma" type="text" inputmode="decimal" value="12">
+          </label>
+          <label>Señal (%)
+            <input id="s-pct" type="text" inputmode="decimal">
+          </label>
+          <label>Valor de proceso <span id="s-unit-label"></span>
+            <input id="s-pv" type="text" inputmode="decimal">
+          </label>
+        </div>
+        <p id="s-status" class="status"></p>
+        <p id="s-error" class="error" hidden></p>
+      </div>
+      <table class="results">
+        <caption>Tabla de calibración (5 puntos)</caption>
+        <thead><tr><th>Señal %</th><th>mA</th><th>Valor</th></tr></thead>
+        <tbody id="s-table"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>v<span id="version"></span></span>
+    <a href="https://github.com/Lestradez/IC-Toolbox" rel="noopener">Código fuente</a>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
