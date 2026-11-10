@@ -273,3 +273,5 @@ button.link {
 .results.tappable tr { cursor: pointer; }
 .results.tappable tr:active td, .results.tappable tr:focus-visible td { background: var(--accent-soft); }
 .results.tappable tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.card-title { margin: 0 0 8px; font-size: 1rem; }
