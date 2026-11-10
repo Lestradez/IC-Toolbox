@@ -268,6 +268,20 @@ test('RTD y termopares: valores de tabla en los dos sentidos', async () => {
   await context.close();
 });
 
+test('sintonía PID: siempre muestra P, I y D, y explica la D = 0', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(`${base}#/pid`);
+  await page.waitForSelector('[data-view="pid"]:not([hidden]) #p-load .pl-row');
+  // Ejemplo: PI por Lambda en PIDE dependiente → D = 0 con su motivo.
+  assert.equal(await page.locator('#p-load .pl-row').count(), 3);
+  assert.match(await page.textContent('#p-load'), /PGain[\s\S]*IGain[\s\S]*DGain/);
+  assert.match(await page.textContent('#p-load'), /D = 0 porque elegiste PI/);
+  await page.selectOption('#p-type', 'PID');
+  assert.equal(await page.locator('#p-load .pl-why:not([hidden])').count(), 0);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 test('«Reportar un problema»: sin formulario abre GitHub con herramienta y versión', async () => {
   const { context, page, errors } = await newPage();
   await page.goto(base + '#/orifice');
