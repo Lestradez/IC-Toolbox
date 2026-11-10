@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseReadings, stats, tTwoSided, coverageFactor, calibrationPoint, termAbs, totalProbableError,
+  calibrationRun, worstVerdict,
 } from '../js/calibration.js';
 
 const close = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)), `${a} != ${b}`);
@@ -137,4 +138,54 @@ test('error total probable: avisa del dato que falta (URL)', () => {
   assert.deepEqual(r.missing, ['Estabilidad']);
   close(r.rss, 0.01);
   assert.ok(Number.isNaN(r.rssReading));
+});
+
+test('peor veredicto', () => {
+  assert.equal(worstVerdict([]), null);
+  assert.equal(worstVerdict([null, 'pass', undefined]), 'pass');
+  assert.equal(worstVerdict(['pass', 'fail-uncertain', 'pass-uncertain']), 'fail-uncertain');
+  assert.equal(worstVerdict(['fail', 'pass']), 'fail');
+});
+
+test('calibración de 5 puntos con subida y bajada: error, histéresis y veredicto', () => {
+  // Salida de un transmisor 4-20 mA, una lectura por sentido, tolerancia ±0,25 % (0,04 mA).
+  const points = [
+    { ref: 4, up: [4.01], down: [4.02] },
+    { ref: 8, up: [8.00], down: [8.03] },
+    { ref: 12, up: [12.02], down: [12.05] }, // bajada fuera: 0,05 mA = 0,3125 %
+    { ref: 16, up: [15.99], down: [16.01] },
+    { ref: 20, up: [19.98] }, // en el 100 % solo se sube
+  ];
+  const r = calibrationRun({ lo: 4, hi: 20, points, tol: 0.25 });
+  close(r.span, 16);
+  assert.deepEqual(r.points.map((p) => p.pct), [0, 25, 50, 75, 100]);
+  close(r.points[1].hysteresis, 0.03);
+  close(r.points[1].hysteresisSpan, 0.1875);
+  assert.ok(Number.isNaN(r.points[4].hysteresis));
+  assert.equal(r.points[4].down, null);
+  close(r.points[2].worst, 0.05);
+  assert.equal(r.points[2].up.verdict, 'pass');
+  assert.equal(r.points[2].down.verdict, 'fail');
+  assert.equal(r.points[2].verdict, 'fail');
+  assert.equal(r.points[0].verdict, 'pass');
+  assert.equal(r.verdict, 'fail');
+  close(r.maxError, 0.05);
+  close(r.maxErrorSpan, 0.3125);
+  close(r.maxHysteresisSpan, 0.1875);
+  assert.ok(Number.isNaN(r.maxSSpan)); // una lectura por sentido: sin repetibilidad
+});
+
+test('calibración multipunto con varios ciclos: repetibilidad y error negativo como máximo', () => {
+  const r = calibrationRun({
+    lo: 0, hi: 100,
+    points: [
+      { ref: 0, up: [0.1, 0.2], down: [0.2, 0.3] },
+      { ref: 100, up: [99.5, 99.7], down: [] },
+    ],
+  });
+  close(r.maxError, -0.5);
+  close(r.maxErrorSpan, -0.5);
+  close(r.maxSSpan, Math.SQRT2 * 0.1);
+  close(r.points[0].hysteresis, 0.1);
+  assert.equal(r.verdict, null); // sin tolerancia no hay veredicto
 });

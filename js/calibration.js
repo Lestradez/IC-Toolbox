@@ -267,3 +267,65 @@ export function totalProbableError(components, ctx) {
     turndown: ctx.url > 0 && span > 0 ? ctx.url / span : NaN,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Calibración de varios puntos con subida y bajada (base de una planilla)
+// ---------------------------------------------------------------------------
+
+/** Veredictos de peor a mejor gravedad, para quedarse con el peor. */
+const VERDICT_RANK = { pass: 0, 'pass-uncertain': 1, 'fail-uncertain': 2, fail: 3 };
+
+/** El peor de varios veredictos (null si no hay ninguno). */
+export function worstVerdict(verdicts) {
+  return verdicts.filter(Boolean).reduce((w, v) => (w === null || VERDICT_RANK[v] > VERDICT_RANK[w] ? v : w), null);
+}
+
+/**
+ * Calibración de varios puntos, cada uno con lecturas de subida y de bajada (una o varias
+ * por sentido, de varios ciclos). Las lecturas, `ref`, `lo` y `hi` van en las mismas unidades:
+ * si se calibra un transmisor por su salida, `lo`/`hi` es 4/20 mA y `ref` la corriente
+ * esperada (se calcula con js/signal.js a partir del valor aplicado).
+ *
+ * @param {object} o
+ * @param {number} o.lo, o.hi       rango (0 % y 100 %) en que se expresan los errores
+ * @param {{ref: number, up?: number[], down?: number[]}[]} o.points
+ * @param {number} [o.tol]          tolerancia en ± % span
+ * @param {number} [o.uStd]         U del patrón (unidades), con factor o.kStd (2)
+ *
+ * Por punto: estadística de cada sentido (calibrationPoint), histéresis = |media subida −
+ * media bajada| (ISA-51.1), peor lectura individual y veredicto (el peor de los dos sentidos).
+ * Global: error máximo, histéresis máxima, s máxima (repetibilidad) en % span y veredicto.
+ */
+export function calibrationRun({ lo, hi, points, tol, uStd = 0, kStd = 2 }) {
+  const span = Math.abs(hi - lo);
+  const pctSpan = (x) => (span > 0 ? (x / span) * 100 : NaN);
+  const out = points.map(({ ref, up = [], down = [] }) => {
+    const dir = (readings) => (readings.length ? calibrationPoint({ readings, ref, lo, hi, uStd, kStd, tol }) : null);
+    const u = dir(up);
+    const d = dir(down);
+    const hysteresis = u && d ? Math.abs(u.mean - d.mean) : NaN;
+    const worst = [u, d].filter(Boolean).reduce((w, r) => (Math.abs(r.worst) > Math.abs(w) ? r.worst : w), 0);
+    return {
+      ref,
+      pct: hi !== lo ? ((ref - lo) / (hi - lo)) * 100 : NaN,
+      up: u,
+      down: d,
+      hysteresis,
+      hysteresisSpan: pctSpan(hysteresis),
+      worst,
+      worstSpan: pctSpan(worst),
+      verdict: worstVerdict([u?.verdict, d?.verdict]),
+    };
+  });
+  const maxBy = (vals) => vals.filter(Number.isFinite).reduce((m, v) => (Number.isNaN(m) || Math.abs(v) > Math.abs(m) ? v : m), NaN);
+  const maxError = out.length ? maxBy(out.map((p) => p.worst)) : NaN;
+  return {
+    span,
+    points: out,
+    maxError,
+    maxErrorSpan: pctSpan(maxError),
+    maxHysteresisSpan: maxBy(out.map((p) => p.hysteresisSpan)),
+    maxSSpan: maxBy(out.flatMap((p) => [p.up?.sSpan, p.down?.sSpan])),
+    verdict: worstVerdict(out.map((p) => p.verdict)),
+  };
+}
