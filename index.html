@@ -26,11 +26,19 @@
     </a>
     <h1 id="title" class="title" hidden></h1>
     <span id="net" class="net" hidden>Sin conexión</span>
+    <button type="button" id="help" class="help-btn" aria-label="Ayuda de la aplicación" aria-haspopup="dialog">?</button>
   </header>
 
   <main id="app">
     <section data-view="home">
       <h1 class="sr-only">Herramientas</h1>
+      <div id="welcome" class="welcome" role="note" hidden>
+        <p><strong>Primera vez por aquí.</strong> La guía corta explica cómo instalarla, usarla sin conexión y reportar problemas. Siempre la encuentras en el «?» de arriba.</p>
+        <div class="welcome-actions">
+          <button type="button" id="welcome-open">Ver la guía</button>
+          <button type="button" id="welcome-close" class="linkbtn">Ahora no</button>
+        </div>
+      </div>
       <label class="search">
         <span class="sr-only">Buscar herramienta</span>
         <input id="search" type="search" placeholder="Buscar: caudal, 4-20, psi…" autocomplete="off" enterkeyhint="search">
@@ -75,6 +83,15 @@
       <strong>Con formulario</strong><span>Sin cuenta. Solo lo ve el autor de la app.</span>
     </a>
     <button type="button" id="report-close" class="report-close">Cancelar</button>
+  </dialog>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+    <header class="help-head">
+      <h2 id="help-title"></h2>
+      <button type="button" id="help-close" class="help-x" aria-label="Cerrar ayuda">×</button>
+    </header>
+    <div id="help-body" class="help-body"></div>
+    <button type="button" id="help-guide" class="report-close" hidden>Ver la guía de inicio</button>
   </dialog>
 
   <script type="module" src="js/app.js"></script>

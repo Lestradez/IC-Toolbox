@@ -5,6 +5,7 @@ import { TOOLS, CATEGORIES, toolById, searchTools } from './tools/registry.js';
 import { REPO, GOATCOUNTER_CODE, FORM_URL, FORM_FIELDS } from './config.js';
 import { createAnalytics, watchErrors } from './analytics.js';
 import { reportUrl, formUrl } from './report.js';
+import { renderHelp, renderGuide } from './help.js';
 
 // scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
 export const APP_VERSION = '__APP_VERSION__';
@@ -48,6 +49,50 @@ $('report').addEventListener('click', openReport);
 $('report-close').addEventListener('click', () => $('report-dialog').close());
 $('report-dialog').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 for (const id of ['report-github', 'report-form']) $(id).addEventListener('click', () => $('report-dialog').close());
+
+// ---------------------------------------------------------------------------
+// Ayuda: «?» de cada herramienta y guía de inicio (se cargan al pedirlas)
+// ---------------------------------------------------------------------------
+
+async function openHelp(forceGuide = false) {
+  const tool = forceGuide ? null : toolById(current);
+  const dlg = $('help-dialog');
+  const body = $('help-body');
+  analytics.event(`help/${tool ? tool.id : 'guide'}`);
+  $('help-guide').hidden = !tool;
+  try {
+    if (tool) {
+      const { help } = await tool.help();
+      $('help-title').textContent = `Ayuda: ${tool.title}`;
+      body.replaceChildren(renderHelp(help));
+    } else {
+      const { guide } = await import('./guide.js');
+      $('help-title').textContent = 'Guía de inicio';
+      body.replaceChildren(renderGuide(guide));
+    }
+  } catch (e) {
+    console.error(e);
+    $('help-title').textContent = 'Ayuda';
+    const p = document.createElement('p');
+    p.className = 'error';
+    p.textContent = 'No se pudo cargar la ayuda. Comprueba la conexión y vuelve a intentarlo.';
+    body.replaceChildren(p);
+  }
+  body.scrollTop = 0;
+  if (!dlg.open) dlg.showModal();
+}
+$('help').addEventListener('click', () => openHelp());
+$('help-guide').addEventListener('click', () => openHelp(true));
+$('help-close').addEventListener('click', () => $('help-dialog').close());
+$('help-dialog').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+// Primera vez: aviso en el inicio (no un diálogo que tape la app). Se recuerda al cerrarlo.
+function dismissWelcome() {
+  $('welcome').hidden = true;
+  saveState('welcomeSeen', true);
+}
+$('welcome-open').addEventListener('click', () => { dismissWelcome(); openHelp(true); });
+$('welcome-close').addEventListener('click', dismissWelcome);
 
 // ---------------------------------------------------------------------------
 // Inicio: buscador, recientes y categorías
@@ -158,6 +203,7 @@ async function route() {
 
   if (!tool) {
     document.title = 'I&C Toolbox';
+    $('welcome').hidden = loadState('welcomeSeen') === true;
     renderHome();
     showView('home');
     return;

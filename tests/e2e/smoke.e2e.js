@@ -366,3 +366,53 @@ test('«Reportar un problema»: con formulario muestra el popup con las dos opci
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('ayuda: guía de inicio la primera vez y «?» en cada herramienta', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base);
+  // Primera vez: aviso visible, no un diálogo que tape la app.
+  assert.equal(await page.isVisible('#welcome'), true);
+  await page.click('#welcome-close');
+  await page.reload();
+  assert.equal(await page.isHidden('#welcome'), true, 'el aviso no debe volver tras cerrarlo');
+  // El «?» de la principal abre la guía.
+  await page.click('#help');
+  await page.waitForSelector('#help-dialog[open]');
+  await page.waitForFunction(() => document.getElementById('help-title').textContent === 'Guía de inicio');
+  assert.match(await page.textContent('#help-body'), /Instalar/);
+  assert.match(await page.textContent('#help-body'), /Sin conexión/);
+  await page.click('#help-close');
+  // Cada herramienta tiene su ayuda, con un ejemplo resuelto.
+  for (const t of TOOLS) {
+    await page.goto(`${base}#/${t.id}`);
+    await page.waitForSelector(`[data-view="${t.id}"]:not([hidden])`);
+    await page.click('#help');
+    await page.waitForSelector('#help-dialog[open]');
+    await page.waitForFunction((title) => document.getElementById('help-title').textContent === title, `Ayuda: ${t.title}`);
+    assert.match(await page.textContent('#help-body'), /Ejemplo:/, t.id);
+    assert.equal(await page.isVisible('#help-guide'), true);
+    await page.click('#help-close');
+  }
+  // Desde la ayuda de una herramienta se llega a la guía.
+  await page.click('#help');
+  await page.click('#help-guide');
+  await page.waitForFunction(() => document.getElementById('help-title').textContent === 'Guía de inicio');
+  await page.click('#help-close');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('la ayuda funciona sin conexión', async () => {
+  const { context, page, errors } = await newPage();
+  await page.goto(base);
+  await waitForController(page);
+  await context.setOffline(true);
+  await page.goto(`${base}#/pid`);
+  await page.waitForSelector('[data-view="pid"]:not([hidden])');
+  await page.click('#help');
+  await page.waitForSelector('#help-dialog[open]');
+  await page.waitForFunction(() => /Micro800/.test(document.getElementById('help-body').textContent));
+  assert.deepEqual(errors, []);
+  await context.close();
+});
