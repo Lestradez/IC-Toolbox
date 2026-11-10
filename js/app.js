@@ -2,10 +2,52 @@
 // Cada herramienta se carga (import dinámico) la primera vez que se abre.
 import { $, loadState, saveState } from './ui.js';
 import { TOOLS, CATEGORIES, toolById, searchTools } from './tools/registry.js';
+import { REPO, GOATCOUNTER_CODE, FORM_URL, FORM_FIELDS } from './config.js';
+import { createAnalytics, watchErrors } from './analytics.js';
+import { reportUrl, formUrl } from './report.js';
 
 // scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
 export const APP_VERSION = '__APP_VERSION__';
-document.getElementById('version').textContent = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
+const VERSION_TEXT = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
+document.getElementById('version').textContent = VERSION_TEXT;
+
+// ---------------------------------------------------------------------------
+// Estadísticas anónimas y reportes. Solo se envían en el sitio publicado (no en
+// localhost) y si hay código de GoatCounter en js/config.js.
+// ---------------------------------------------------------------------------
+
+let current = null; // id de la vista abierta ('home' o id de herramienta)
+const published = !['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
+const analytics = createAnalytics({ code: published ? GOATCOUNTER_CODE : '', version: VERSION_TEXT });
+watchErrors(analytics, () => current || 'home');
+window.addEventListener('online', () => analytics.flush());
+analytics.flush();
+
+if (published && GOATCOUNTER_CODE) {
+  $('stats-row').hidden = false;
+  $('stats').checked = loadState('analytics') !== false;
+  $('stats').addEventListener('change', () => saveState('analytics', $('stats').checked));
+}
+
+function openReport() {
+  const tool = toolById(current);
+  const info = {
+    tool: tool ? tool.id : '', toolTitle: tool ? tool.title : '',
+    version: VERSION_TEXT, userAgent: navigator.userAgent,
+  };
+  const github = reportUrl({ repo: REPO, ...info, online: navigator.onLine });
+  const form = formUrl({ url: FORM_URL, fields: FORM_FIELDS, ...info });
+  analytics.event(`report/${current || 'home'}`);
+  if (!form) { window.open(github, '_blank', 'noopener'); return; }
+  $('report-github').href = github;
+  $('report-form').href = form;
+  $('report-form').hidden = false;
+  $('report-dialog').showModal();
+}
+$('report').addEventListener('click', openReport);
+$('report-close').addEventListener('click', () => $('report-dialog').close());
+$('report-dialog').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+for (const id of ['report-github', 'report-form']) $(id).addEventListener('click', () => $('report-dialog').close());
 
 // ---------------------------------------------------------------------------
 // Inicio: buscador, recientes y categorías
@@ -78,7 +120,6 @@ $('search').addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 const mounted = new Map(); // id -> Promise<HTMLElement>
-let current = null;
 let cameFromHome = false;
 
 function mountTool(tool) {
@@ -113,6 +154,7 @@ async function route() {
   $('back').hidden = !tool;
   $('brand').hidden = !!tool;
   $('title').hidden = !tool;
+  analytics.pageview(tool ? `/${tool.id}` : '/', tool ? tool.title : 'Inicio');
 
   if (!tool) {
     document.title = 'I&C Toolbox';

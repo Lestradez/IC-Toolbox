@@ -58,6 +58,24 @@
     </label>
     <a href="https://github.com/Lestradez/IC-Toolbox" rel="noopener">Código fuente</a>
   </footer>
+  <footer class="foot foot2">
+    <button type="button" id="report" class="linkbtn">Reportar un problema</button>
+    <label class="stats" id="stats-row" hidden>
+      <input type="checkbox" id="stats" checked> Uso anónimo
+    </label>
+  </footer>
+
+  <dialog id="report-dialog" class="report-dialog" aria-labelledby="report-title">
+    <h2 id="report-title">Reportar un problema</h2>
+    <p class="note">Se enviará con la herramienta y la versión ya indicadas.</p>
+    <a id="report-github" class="report-opt" href="#" target="_blank" rel="noopener">
+      <strong>Con GitHub</strong><span>Requiere cuenta de GitHub. El reporte es público.</span>
+    </a>
+    <a id="report-form" class="report-opt" href="#" target="_blank" rel="noopener" hidden>
+      <strong>Con formulario</strong><span>Sin cuenta. Solo lo ve el autor de la app.</span>
+    </a>
+    <button type="button" id="report-close" class="report-close">Cancelar</button>
+  </dialog>
 
   <script type="module" src="js/app.js"></script>
 </body>
