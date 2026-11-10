@@ -1,149 +1,159 @@
-import {
-  QUANTITIES, convertAll, mAToPercent, percentToMA, percentToPV, pvToPercent, namurStatus,
-} from './units.js';
-import { parseNum, fmt, $ } from './ui.js';
-import { initOrifice } from './orifice-view.js';
+// Carcasa de la app: cabecera, inicio con buscador, router por hash, tema y service worker.
+// Cada herramienta se carga (import dinámico) la primera vez que se abre.
+import { $, loadState, saveState } from './ui.js';
+import { TOOLS, CATEGORIES, toolById, searchTools } from './tools/registry.js';
 
 // scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
 export const APP_VERSION = '__APP_VERSION__';
 document.getElementById('version').textContent = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
 
 // ---------------------------------------------------------------------------
+// Inicio: buscador, recientes y categorías
+// ---------------------------------------------------------------------------
+
+const MAX_RECENT = 3;
+
+function toolLink(t, compact = false) {
+  const a = document.createElement('a');
+  a.className = compact ? 'chip' : 'tool';
+  a.href = `#/${t.id}`;
+  const strong = document.createElement('strong');
+  strong.textContent = t.title;
+  a.append(strong);
+  if (!compact) {
+    const span = document.createElement('span');
+    span.textContent = t.desc;
+    a.append(span);
+  }
+  return a;
+}
+
+function renderHome() {
+  const query = $('search').value.trim();
+  const found = searchTools(query);
+
+  const recent = $('recent');
+  const recentTools = (loadState('recent') || []).map(toolById).filter(Boolean);
+  recent.replaceChildren();
+  recent.hidden = !!query || recentTools.length === 0;
+  if (!recent.hidden) {
+    const h = document.createElement('h2');
+    h.textContent = 'Recientes';
+    recent.append(h, ...recentTools.map((t) => toolLink(t, true)));
+  }
+
+  const catalog = $('catalog');
+  catalog.replaceChildren();
+  for (const cat of CATEGORIES) {
+    const tools = found.filter((t) => t.category === cat);
+    if (!tools.length) continue;
+    const h = document.createElement('h2');
+    h.textContent = cat;
+    const nav = document.createElement('nav');
+    nav.className = 'tools';
+    nav.setAttribute('aria-label', cat);
+    nav.append(...tools.map((t) => toolLink(t)));
+    catalog.append(h, nav);
+  }
+  const none = $('no-results');
+  none.hidden = found.length > 0;
+  none.textContent = `Ninguna herramienta coincide con «${query}».`;
+}
+
+function rememberRecent(id) {
+  const list = [id, ...(loadState('recent') || []).filter((x) => x !== id)].slice(0, MAX_RECENT);
+  saveState('recent', list);
+}
+
+$('search').addEventListener('input', renderHome);
+$('search').addEventListener('keydown', (e) => {
+  // Enter abre la primera coincidencia.
+  if (e.key !== 'Enter') return;
+  const first = searchTools($('search').value)[0];
+  if (first) location.hash = `#/${first.id}`;
+});
+
+// ---------------------------------------------------------------------------
 // Router por hash
 // ---------------------------------------------------------------------------
 
-function route() {
-  const view = (location.hash.replace(/^#\/?/, '') || 'home').split('/')[0];
-  let found = false;
-  document.querySelectorAll('[data-view]').forEach((el) => {
-    const match = el.dataset.view === view;
-    el.hidden = !match;
-    if (match) found = true;
-  });
-  if (!found) document.querySelector('[data-view="home"]').hidden = false;
-  window.scrollTo(0, 0);
+const mounted = new Map(); // id -> Promise<HTMLElement>
+let current = null;
+let cameFromHome = false;
+
+function mountTool(tool) {
+  if (!mounted.has(tool.id)) {
+    const section = document.createElement('section');
+    section.dataset.view = tool.id;
+    section.hidden = true;
+    $('app').append(section);
+    mounted.set(tool.id, tool.load()
+      .then((mod) => { mod.mount(section); return section; })
+      .catch((e) => {
+        console.error(e);
+        mounted.delete(tool.id);
+        section.innerHTML = '<p class="error">No se pudo cargar la herramienta. Comprueba la conexión y vuelve a intentarlo.</p>';
+        return section;
+      }));
+  }
+  return mounted.get(tool.id);
 }
+
+function showView(id) {
+  for (const el of document.querySelectorAll('[data-view]')) el.hidden = el.dataset.view !== id;
+}
+
+async function route() {
+  const id = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
+  const tool = toolById(id);
+  const prev = current;
+  current = tool ? tool.id : 'home';
+  window.scrollTo(0, 0);
+
+  $('back').hidden = !tool;
+  $('brand').hidden = !!tool;
+  $('title').hidden = !tool;
+
+  if (!tool) {
+    document.title = 'I&C Toolbox';
+    renderHome();
+    showView('home');
+    return;
+  }
+  cameFromHome = prev === 'home';
+  document.title = `${tool.title} · I&C Toolbox`;
+  $('title').textContent = tool.title;
+  rememberRecent(tool.id);
+  await mountTool(tool);
+  if (current === tool.id) showView(tool.id);
+}
+
+// «Atrás» vuelve al inicio sin apilar historial: si se llegó desde el inicio, deshace
+// esa navegación (así el botón atrás de Android no rebota entre inicio y herramienta).
+$('back').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (cameFromHome) history.back();
+  else location.replace('#/');
+});
+
 window.addEventListener('hashchange', route);
 route();
 
 // ---------------------------------------------------------------------------
-// Conversor de unidades
+// Tema: automático (el del sistema), claro u oscuro
 // ---------------------------------------------------------------------------
 
-const uq = $('u-quantity');
-const uFrom = $('u-from');
-const uVal = $('u-value');
-
-for (const [key, q] of Object.entries(QUANTITIES)) uq.add(new Option(q.label, key));
-
-function fillUnits() {
-  const q = QUANTITIES[uq.value];
-  uFrom.innerHTML = '';
-  for (const [key, u] of Object.entries(q.units)) uFrom.add(new Option(u.label, key));
-  $('u-note').textContent = q.note || '';
-}
-
-function renderUnits() {
-  const body = $('u-results');
-  const err = $('u-error');
-  body.innerHTML = '';
-  err.hidden = true;
-  const v = parseNum(uVal.value);
-  if (Number.isNaN(v)) return;
+const themeSel = $('theme');
+themeSel.value = document.documentElement.dataset.theme || 'auto';
+themeSel.addEventListener('change', () => {
+  const t = themeSel.value;
+  if (t === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
   try {
-    for (const r of convertAll(uq.value, v, uFrom.value)) {
-      const tr = document.createElement('tr');
-      if (r.unit === uFrom.value) tr.className = 'src';
-      tr.innerHTML = `<td class="num"></td><td></td>`;
-      tr.children[0].textContent = fmt(r.value);
-      tr.children[1].textContent = r.label;
-      body.appendChild(tr);
-    }
-  } catch (e) {
-    err.textContent = e.message;
-    err.hidden = false;
-  }
-}
-
-uq.addEventListener('change', () => { fillUnits(); renderUnits(); });
-uFrom.addEventListener('change', renderUnits);
-uVal.addEventListener('input', renderUnits);
-fillUnits();
-renderUnits();
-
-// ---------------------------------------------------------------------------
-// Señal 4-20 mA
-// ---------------------------------------------------------------------------
-
-const sMa = $('s-ma');
-const sPct = $('s-pct');
-const sPv = $('s-pv');
-
-const STATUS_TEXT = {
-  ok: ['Dentro de rango', 'ok'],
-  'bajo-rango': ['Por debajo de 4 mA (saturación NAMUR ≥ 3,8 mA)', 'warn'],
-  'sobre-rango': ['Por encima de 20 mA (saturación NAMUR ≤ 20,5 mA)', 'warn'],
-  'fallo-bajo': ['Fallo NAMUR NE 43 (≤ 3,6 mA)', 'bad'],
-  'fallo-alto': ['Fallo NAMUR NE 43 (≥ 21 mA)', 'bad'],
-};
-
-function range() {
-  return { lrv: parseNum($('s-lrv').value), urv: parseNum($('s-urv').value), sqrt: $('s-sqrt').checked };
-}
-
-function updateSignal(source) {
-  const { lrv, urv, sqrt } = range();
-  const err = $('s-error');
-  err.hidden = true;
-  $('s-unit-label').textContent = $('s-unit').value ? `(${$('s-unit').value})` : '';
-  if (Number.isNaN(lrv) || Number.isNaN(urv) || lrv === urv) {
-    err.textContent = 'Introduce un LRV y un URV válidos y distintos.';
-    err.hidden = false;
-    return;
-  }
-
-  let pct;
-  if (source === 'ma') pct = mAToPercent(parseNum(sMa.value));
-  else if (source === 'pct') pct = parseNum(sPct.value);
-  else pct = pvToPercent(parseNum(sPv.value), lrv, urv, sqrt);
-
-  if (Number.isNaN(pct)) return;
-  const mA = percentToMA(pct);
-  if (source !== 'ma') sMa.value = fmt(mA);
-  if (source !== 'pct') sPct.value = fmt(pct);
-  if (source !== 'pv') sPv.value = fmt(percentToPV(pct, lrv, urv, sqrt));
-
-  const [text, cls] = STATUS_TEXT[namurStatus(mA)];
-  const st = $('s-status');
-  st.textContent = text;
-  st.className = `status ${cls}`;
-
-  const tbody = $('s-table');
-  tbody.innerHTML = '';
-  for (const p of [0, 25, 50, 75, 100]) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td class="num"></td><td class="num"></td><td class="num"></td>';
-    tr.children[0].textContent = `${p} %`;
-    tr.children[1].textContent = fmt(percentToMA(p));
-    tr.children[2].textContent = fmt(percentToPV(p, lrv, urv, sqrt));
-    tbody.appendChild(tr);
-  }
-}
-
-let lastSignalSource = 'ma';
-sMa.addEventListener('input', () => { lastSignalSource = 'ma'; updateSignal('ma'); });
-sPct.addEventListener('input', () => { lastSignalSource = 'pct'; updateSignal('pct'); });
-sPv.addEventListener('input', () => { lastSignalSource = 'pv'; updateSignal('pv'); });
-for (const id of ['s-lrv', 's-urv', 's-unit', 's-sqrt']) {
-  $(id).addEventListener(id === 's-sqrt' ? 'change' : 'input', () => updateSignal(lastSignalSource));
-}
-updateSignal('ma');
-
-// ---------------------------------------------------------------------------
-// Placa orificio
-// ---------------------------------------------------------------------------
-
-initOrifice();
+    if (t === 'auto') localStorage.removeItem('ict.theme');
+    else localStorage.setItem('ict.theme', t);
+  } catch { /* sin almacenamiento: el tema dura hasta cerrar */ }
+});
 
 // ---------------------------------------------------------------------------
 // Estado de red y service worker

@@ -35,6 +35,16 @@ npm run test:e2e  # test de humo en Chromium: rutas, offline y aviso de actualiz
 ```
 
 Los cálculos viven en módulos puros (`js/units.js`, `js/orifice.js`, `js/pipes.js`) sin DOM, para poder testearlos.
+
+### Añadir una herramienta
+
+1. Cálculo en un módulo puro con tests (`js/<algo>.js` + `tests/<algo>.test.js`).
+2. Vista en `js/tools/<id>/view.js` que exporte `mount(section)`: pinta su HTML y conecta eventos.
+   Para recordar los datos entre sesiones usa `loadState`/`saveState` de `js/ui.js`.
+3. Una entrada en `js/tools/registry.js` (título, descripción, categoría, palabras clave).
+
+El inicio, el buscador, la cabecera y la precarga offline salen del registro: no hay que tocar
+`index.html` ni `sw.js`. Cada vista se descarga la primera vez que se abre.
 Los casos de referencia de la placa orificio se generan con la librería independiente `fluids`
 (`scripts/orifice_reference.py`).
 `scripts/build.mjs` genera el sitio publicable: rellena en `sw.js` la lista de precache
