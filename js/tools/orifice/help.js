@@ -6,7 +6,7 @@ export const help = {
     ['d del orificio', 'Diámetro del orificio de la placa (de la hoja de datos). β = d / D debe estar entre 0,10 y 0,75.'],
     ['Tomas de presión', 'Esquina, brida o D y D/2: deben coincidir con las de la instalación.'],
     ['ΔP', 'Directo o desde una señal mA (con su URV y si el transmisor extrae raíz cuadrada).'],
-    ['Fluido', 'Líquido, mezcla crudo-agua (con BSW), gas o vapor, con su densidad a las condiciones de operación; para gas, p1, T1, M, κ y Z.'],
+    ['Fluido', 'Líquido, mezcla crudo-agua (con BSW), gas o vapor, con su densidad a las condiciones de operación; para gas, p1, T1, M, κ y Z. «Elegir de la tabla» los rellena desde la tabla de Densidades.'],
     ['Viscosidad dinámica', 'Solo afecta al número de Reynolds y al coeficiente C.'],
     ['Coeficiente de descarga C', 'Calculado (Reader-Harris/Gallagher) o fijo, si tu hoja de datos da uno.'],
     ['Desde rango: Q máx y ΔP a Q máx', 'Los datos de diseño de la placa y la densidad de diseño frente a la real.'],

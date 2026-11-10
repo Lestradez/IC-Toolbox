@@ -23,7 +23,7 @@ export const help = {
   },
   limits: [
     'Con dos sellos remotos se supone el mismo relleno y la misma temperatura en los dos capilares; si no, aparece un error que no se modela (efecto de temperatura del capilar).',
-    'La densidad se toma constante: si cambia mucho con la temperatura o la composición, el nivel medido tendrá error. Para obtenerla puedes usar una tabla de densidades.',
+    'La densidad se toma constante: si cambia mucho con la temperatura o la composición, el nivel medido tendrá error. El botón «Elegir de la tabla» junto a cada densidad la toma de la tabla de Densidades, con la temperatura.',
     'Supone nivel de líquido homogéneo, sin interfaces ni espuma.',
     'En pierna húmeda se supone que la pierna LP se mantiene llena (condensación o rellenado); si se vacía, el cero se desplaza.',
     'Los límites del sensor son opcionales y solo se usan para avisar.',

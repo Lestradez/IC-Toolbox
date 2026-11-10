@@ -35,6 +35,7 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   const { calibrationPoint, totalProbableError } = await import('../js/calibration.js');
   const { orificeFlow, flowFromRange } = await import('../js/orifice.js');
   const { tune, defaultLambda } = await import('../js/pid.js');
+  const { liquidProps, rho15FromApi, petroleumDensity } = await import('../js/densities.js');
   const ex = async (id) => (await TOOLS.find((t) => t.id === id).help()).help.example.result;
   const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
 
@@ -71,6 +72,11 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   const o = orificeFlow({ D: 0.1, d: 0.06, dp: 25000, rho: 998.2, mu: 0.001, taps: 'flange' });
   near(o.C, 0.609, 5e-4); near(o.qv * 3600, 47.05, 5e-3); near(o.ReD, 166000, 500);
   near(flowFromRange({ qmax: 100, dpmax: 250, dp: 100, rhoDesign: 1000, rhoActual: 1000 }).q, 63.2, 0.05);
+
+  assert.match(await ex('densities'), /998,21 kg\/m³ y 1,002 cP.*849,4 kg\/m³.*831,2 kg\/m³/);
+  near(liquidProps('water', 20).rho, 998.21, 5e-3); near(liquidProps('water', 20).mu, 1.002, 5e-4);
+  const r15 = rho15FromApi(35, 'crude');
+  near(r15, 849.4, 0.05); near(petroleumDensity('crude', r15, 40).rho, 831.2, 0.05);
 
   assert.match(await ex('pid'), /Kc = 1,5, Ti = 45 s/);
   const m = { kind: 'self', K: 1.5, tau: 45, theta: 10 };

@@ -83,6 +83,7 @@ export const TOOLS = [
     category: 'Fluidos',
     keywords: 'densidad peso específico sg gravedad específica relativa api grados crudo petróleo gasolina diésel gasóleo jet queroseno fuel oil agua etanol metanol acetona benceno tolueno hexano glicol etilenglicol propilenglicol anticongelante mercurio propano butano glp amoníaco co2 aire nitrógeno oxígeno hidrógeno helio argón metano etano gas natural vapor saturado viscosidad cinemática dinámica cp cst masa molar compresibilidad z peng robinson dilatación temperatura tabla fluido',
     load: () => import('./densities/view.js'),
+    help: () => import('./densities/help.js'),
   },
   {
     id: 'orifice',
