@@ -6,7 +6,9 @@ import {
   tune, tuneUltimate, defaultLambda, robustness, msClass, simulate, actionFor,
 } from '../../pid.js';
 import { parseNum, fmt, fmtFixed, $, loadState, saveState } from '../../ui.js';
-import { resultCardHTML, bindResultCard, enhanceSigned, toast } from '../../components.js';
+import {
+  resultCardHTML, bindResultCard, enhanceSigned, toast, copyToClipboard, flash,
+} from '../../components.js';
 
 const num = (id, value = '', signed = false) =>
   `<input id="${id}" type="text" inputmode="decimal"${signed ? ' data-signed' : ''} value="${value}">`;
@@ -163,6 +165,7 @@ const MS_TEXT = {
 };
 
 function fail(text) {
+  $('p-load').hidden = true;
   showResult({ value: '—', msgs: [['bad', text]] });
   drawPlot(null);
 }
@@ -313,9 +316,10 @@ function render() {
   }
   if (!p) return fail('La regla no tiene versión para este tipo de controlador.');
 
-  // Parámetros en el bloque elegido
+  // Parámetros en el bloque elegido: siempre P, I y D, en ese orden.
   const params = paramsText(ctl, p, R);
-  for (const [n, v, u] of params) rows.push([n, `${v}${u ? ` ${u}` : ''}`]);
+  const why = zeroReasons(p, type, rule, ctl, model);
+  drawLoad(params, why, C.label);
   rows.push(['Forma ideal (ISA)', `Kc ${fmt(p.Kc, 4)} · Ti ${tfmt(p.Ti)} · Td ${tfmt(p.Td)}`]);
   if (C.setup) msgs.push(['ok', C.setup]);
   msgs.push(CONF[C.confidence]);
@@ -356,16 +360,68 @@ function render() {
   }
   drawPlot(sim, model);
 
-  const [first, ...rest] = params;
   showResult({
-    value: first[1],
-    unit: `${first[0]}${first[2] ? ` (${first[2]})` : ''}`,
-    alt: rest.map(([n, v, u]) => `${n} = ${v}${u ? ` ${u}` : ''}`).join(' · '),
+    value: params.map(([, v], i) => `${'PID'[i]} ${v}`).join(' · '),
     rows,
     msgs,
     text: [`Sintonía ${type} · ${(mode === 'ultimate' ? ULTIMATE_RULES : RULES)[rule].label} · ${C.label}`,
+      ...params.map(([n, v, u], i) => `${n}: ${v}${u ? ` ${u}` : ''}${why[i] ? ` (${why[i]})` : ''}`),
       ...rows.map(([k, v]) => `${k}: ${v.replaceAll(' · ', ', ')}`),
       ...(C.setup ? [C.setup] : []), ...(C.source ? [`Fuente: ${C.source}`] : [])].join('\n'),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Constantes para cargar
+// ---------------------------------------------------------------------------
+
+const ROLES = ['P · proporcional', 'I · integral', 'D · derivativa'];
+
+/** Por qué I o D quedan anuladas, para que nadie piense que falta un dato. [texto P, texto I, texto D] */
+function zeroReasons(p, type, rule, ctl, model) {
+  const why = ['', '', ''];
+  if (!Number.isFinite(p.Ti)) {
+    why[1] = 'Sin integral porque elegiste P: quedará un error permanente (offset).';
+    if (ctl === 'm221-pid') why[1] += ' En el M221 Ti = 0 cambia de algoritmo, no anula la integral: mejor usa PI.';
+    else if (ctl.startsWith('micro800')) why[1] += ' El Micro800 no admite Ti = 0: carga un Ti muy grande (p. ej. 99999 s).';
+    else why[1] += ' En este bloque 0 anula la integral.';
+  }
+  if (p.Td === 0) {
+    const canPid = mode === 'ultimate'
+      ? ULTIMATE_RULES[rule].types.includes('PID')
+      : ruleTypes(rule, model?.kind).includes('PID');
+    why[2] = `D = 0 porque elegiste ${type}. Es lo normal en caudal, presión y nivel: la derivativa amplifica el ruido de la PV.`;
+    why[2] += canPid
+      ? ' Para un lazo lento y limpio (temperatura) prueba PID en «Controlador».'
+      : ' Esta regla no da derivativa; para PID usa Lambda o Ziegler-Nichols.';
+  }
+  return why;
+}
+
+function drawLoad(params, why, label) {
+  const box = $('p-load');
+  box.hidden = false;
+  box.querySelector('.pl-head').textContent = `Para cargar en ${label}`;
+  const list = box.querySelector('.pl-rows');
+  list.replaceChildren();
+  params.forEach(([name, v, unit], i) => {
+    const row = document.createElement('div');
+    row.className = 'pl-row';
+    row.innerHTML = '<span class="pl-role"></span><span class="pl-name"></span>'
+      + '<span class="pl-val"><b></b> <small></small></span><button type="button" class="pl-copy">Copiar</button>'
+      + '<p class="pl-why"></p>';
+    row.querySelector('.pl-role').textContent = ROLES[i];
+    row.querySelector('.pl-name').textContent = name;
+    row.querySelector('b').textContent = v;
+    row.querySelector('small').textContent = unit;
+    const w = row.querySelector('.pl-why');
+    w.textContent = why[i];
+    w.hidden = !why[i];
+    row.querySelector('.pl-copy').addEventListener('click', async (e) => {
+      // Studio 5000, CCW y Control Expert esperan punto decimal.
+      flash(e.currentTarget, (await copyToClipboard(v.replace(',', '.'))) ? 'Copiado ✓' : 'No se pudo');
+    });
+    list.append(row);
   });
 }
 
@@ -423,6 +479,15 @@ export function mount(section) {
   section.innerHTML = TEMPLATE;
   enhanceSigned(section);
   showResult = bindResultCard(section, 'p');
+  // Las tres constantes van en su propio bloque, arriba de la tarjeta: el número grande
+  // de la tarjeta mostraría solo una.
+  const big = $('p-main').closest('.big');
+  big.hidden = true;
+  const load = document.createElement('div');
+  load.id = 'p-load';
+  load.className = 'pid-load';
+  load.innerHTML = '<p class="pl-head"></p><div class="pl-rows"></div>';
+  big.after(load);
   refreshSelects();
 
   ids = [...section.querySelectorAll('input, select, textarea')].map((el) => el.id).filter(Boolean);
