@@ -28,15 +28,20 @@ y escritorio y funciona sin conexión.
 ## Desarrollo local
 
 ```bash
-npm test          # tests de cálculo (node --test, sin dependencias)
-npm start         # sirve en http://localhost:8080
+npm test          # tests de cálculo y de publicación (node --test, sin dependencias)
+npm start         # construye _site/ y lo sirve en http://localhost:8080
+npm ci && npx playwright install chromium
+npm run test:e2e  # test de humo en Chromium: rutas, offline y aviso de actualización
 ```
 
 Los cálculos viven en módulos puros (`js/units.js`, `js/orifice.js`, `js/pipes.js`) sin DOM, para poder testearlos.
 Los casos de referencia de la placa orificio se generan con la librería independiente `fluids`
 (`scripts/orifice_reference.py`).
-Al publicar una versión, sube `CACHE_VERSION` en `sw.js` y `APP_VERSION` en `js/app.js`
-para que los móviles descarguen la nueva versión.
+`scripts/build.mjs` genera el sitio publicable: rellena en `sw.js` la lista de precache
+(todo lo que hay en `css/`, `js/` e `icons/`) y una versión de caché con un hash del contenido.
+No hay que tocar versiones a mano para que los móviles se actualicen: cualquier cambio produce
+una versión nueva, que se descarga en segundo plano y se activa cuando el usuario pulsa
+«Actualizar». Sube `version` en `package.json` solo para nombrar la release.
 
 Los iconos se regeneran con `python3 scripts/make_icons.py` (requiere Pillow).
 

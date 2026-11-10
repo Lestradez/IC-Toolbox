@@ -1,25 +1,23 @@
 // Service worker: precarga todos los recursos y sirve cache-first para que la app
-// funcione sin conexión. Sube CACHE_VERSION en cada release para invalidar la caché.
-const CACHE_VERSION = 'ic-toolbox-v0.2.0';
-
-const PRECACHE = [
-  './',
-  './index.html',
-  './css/style.css',
-  './js/app.js',
-  './js/units.js',
-  './js/ui.js',
-  './js/orifice.js',
-  './js/orifice-view.js',
-  './js/pipes.js',
-  './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/maskable-512.png',
-];
+// funcione sin conexión.
+//
+// No edites la versión ni la lista: scripts/build.mjs las rellena al publicar
+// (la versión lleva un hash del contenido, así que cambia con cualquier archivo).
+const CACHE_VERSION = '__CACHE_VERSION__';
+const PRECACHE = [/* __PRECACHE__ */];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_VERSION).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // cache: 'reload' salta la caché HTTP del navegador. Sin esto, en los minutos tras un
+  // deploy el SW nuevo podría guardar copias viejas de los archivos bajo la versión nueva.
+  event.waitUntil(
+    caches.open(CACHE_VERSION).then((c) => c.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' })))),
+  );
+  // Sin skipWaiting aquí: la versión nueva espera a que el usuario pulse «Actualizar»
+  // (o a que cierre la app). Así una página vieja nunca mezcla archivos de dos versiones.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -34,15 +32,12 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((hit) => {
+    caches.open(CACHE_VERSION).then((cache) => cache.match(req, { ignoreSearch: true }).then((hit) => {
       if (hit) return hit;
       return fetch(req).then((res) => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE_VERSION).then((c) => c.put(req, copy));
-        }
+        if (res.ok) cache.put(req, res.clone());
         return res;
-      }).catch(() => (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()));
-    }),
+      }).catch(() => (req.mode === 'navigate' ? cache.match('./index.html') : Response.error()));
+    })),
   );
 });

@@ -1,12 +1,17 @@
 {
   "name": "ic-toolbox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "I&C Toolbox: navaja suiza offline para instrumentistas (PWA)",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "start": "python3 -m http.server 8080"
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.e2e.js",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   },
   "license": "MIT"
 }
