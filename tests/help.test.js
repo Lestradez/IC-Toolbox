@@ -31,7 +31,7 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   const { convert } = await import('../js/units.js');
   const { scale } = await import('../js/signal.js');
   const { rtdResistance, tcTempToMeasured, tcMeasuredToTemp } = await import('../js/temperature.js');
-  const { levelRange } = await import('../js/level.js');
+  const { tankRange } = await import('../js/level.js');
   const { calibrationPoint, totalProbableError } = await import('../js/calibration.js');
   const { orificeFlow, flowFromRange } = await import('../js/orifice.js');
   const { tune, defaultLambda } = await import('../js/pid.js');
@@ -64,9 +64,10 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   ], { lo: 0, hi: 10, url: 25, reading: 10 });
   near(t.rssSpan, 0.125, 5e-4); near(t.worstSpan, 0.209, 5e-4); near(t.turndown, 2.5, 1e-9);
 
-  assert.match(await ex('level'), /−166,713 mbar.*−34,3233 mbar.*132,39 mbar/);
-  const wet = levelRange({ config: 'wet', lo: 0, hi: 1.5, tap: 0, rho: 900, taps: 1.7, rhoRef: 1000 });
-  near(wet.lrv / 100, -166.713, 5e-4); near(wet.urv / 100, -34.3233, 5e-4); near(wet.span / 100, 132.39, 5e-3);
+  assert.match(await ex('level'), /LRV = 0 mbar y URV = 706,079 mbar.*0 a 8 m.*1 a 9 m.*0 a 8 m más 1 m.*11,1 %/);
+  const tk = tankRange({ config: 'open', top: 9, tap: 1, rho: 900 });
+  near(tk.lrv / 100, 0, 1e-9); near(tk.urv / 100, 706.079, 5e-4);
+  near(tk.column.urv, 8, 1e-9); near(tk.deadZone.pct, 11.1, 0.05);
 
   assert.match(await ex('orifice'), /β = 0,600, C ≈ 0,609, Re_D ≈ 166 000, Q ≈ 47,05 m³\/h.*63,2 m³\/h/);
   const o = orificeFlow({ D: 0.1, d: 0.06, dp: 25000, rho: 998.2, mu: 0.001, taps: 'flange' });

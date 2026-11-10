@@ -80,7 +80,7 @@ test('cada herramienta carga sin errores', async () => {
   assert.equal(await page.textContent('#c-main'), '+0,200 % span', 'estadística de calibración');
   await page.goto(base + '#/level');
   await page.waitForSelector('[data-view="level"]:not([hidden])');
-  assert.match(await page.textContent('#l-main'), /^-166,713 … -34,3233 mbar$/, 'nivel por ΔP');
+  assert.match(await page.textContent('#l-main'), /^0 … 706,079 mbar$/, 'nivel por ΔP');
   assert.deepEqual(errors, []);
   await context.close();
 });

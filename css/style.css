@@ -367,3 +367,18 @@ button.link {
 .help-flag.warn { color: var(--warn); }
 .help-flag.bad { color: var(--bad); }
 .help-dialog > .report-close { border-top: 1px solid var(--border); margin: 0; color: var(--accent); }
+
+/* Esquema del tanque (nivel por ΔP) */
+.tank svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 0 auto; }
+.tank text { font-size: 10px; fill: var(--muted); }
+.tank .xt { fill: var(--on-accent); font-weight: 600; }
+.tank .zone { font-size: 9px; }
+.tank .wall { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; }
+.tank .roof { stroke: var(--text); stroke-width: 2; }
+.tank .meas { fill: var(--accent-soft); }
+.tank .dead { fill: var(--border); opacity: .6; }
+.tank .tick { stroke: var(--muted); stroke-width: 1; }
+.tank .line { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.tank .line.lp { stroke: var(--warn); }
+.tank .line.dry, .tank .line.capillary { stroke-dasharray: 4 3; }
+.tank .xmtr { fill: var(--accent); }

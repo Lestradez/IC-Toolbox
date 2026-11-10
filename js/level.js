@@ -163,3 +163,55 @@ export function levelRange({ config, lo, hi, tap, rho, offset = 0, taps, rhoFill
     },
   };
 }
+
+/**
+ * Rango de un transmisor de nivel dado el tanque como se mide en planta.
+ *
+ * La cota 0 es la referencia física del tanque (suelo, o el aro donde termina un fondo cónico) y
+ * la cota superior es el aro del techo. El transmisor mide de la toma HP hasta la cota superior:
+ * 0 % del lazo = toma, 100 % = cota superior. Lo que queda por debajo de la toma es zona muerta.
+ *
+ * @param {object} o
+ * @param {string} o.config       clave de CONFIGS
+ * @param {number} o.top          cota superior del tanque (m, desde la referencia 0)
+ * @param {number} o.tap          cota de la toma HP o de la brida del sello (m)
+ * @param {number} [o.xmtr]       cota del transmisor (m); por defecto, la de la toma (montaje en brida)
+ * @param {number} [o.lpTap]      cota de la toma LP (m), tanques cerrados; por defecto, la cota superior
+ * @param {number} o.rho          densidad del líquido (kg/m³)
+ * @param {number} [o.rhoFill]    densidad del relleno del capilar (kg/m³)
+ * @param {number} [o.rhoRef]     densidad de la pierna húmeda (kg/m³)
+ * @returns rango en Pa (ver levelRange) más: `column` (LRV y URV como m de líquido), `plc`
+ *   (escalado de ingeniería: 0 % = tap, 100 % = top, y la forma «0..alto + offset»), `deadZone`
+ *   (m y % de la altura del tanque bajo la toma) y `tapPct`/`xmtrPct`/`lpPct` (% de la altura del tanque).
+ * @throws {RangeError}
+ */
+export function tankRange({ config, top, tap, xmtr, lpTap, rho, rhoFill, rhoRef }) {
+  const c = CONFIGS[config];
+  if (!c) throw new RangeError('Tipo de instalación desconocido.');
+  if (!Number.isFinite(top) || !(top > 0)) throw new RangeError('La cota superior debe ser mayor que 0 (se mide desde la referencia 0).');
+  if (!Number.isFinite(tap) || tap < 0) throw new RangeError('La cota de la toma debe ser 0 o más: no puede quedar por debajo de la referencia.');
+  if (!(tap < top)) throw new RangeError('La toma HP debe quedar por debajo de la cota superior.');
+  const x = xmtr === undefined || Number.isNaN(xmtr) ? tap : xmtr;
+  if (!Number.isFinite(x)) throw new RangeError('Cota del transmisor no válida.');
+  const lp = lpTap === undefined || Number.isNaN(lpTap) ? top : lpTap;
+  const r = levelRange({
+    config, lo: tap, hi: top, tap, rho,
+    offset: tap - x,
+    taps: c.taps ? lp - tap : undefined,
+    rhoFill, rhoRef,
+  });
+  const rg = G0 * rho;
+  const height = top - tap;
+  return {
+    ...r,
+    height,
+    column: { lrv: r.lrv / rg, urv: r.urv / rg },
+    plc: { lo: tap, hi: top, span: height, offset: tap },
+    deadZone: { height: tap, pct: (tap / top) * 100 },
+    tapPct: (tap / top) * 100,
+    xmtrPct: (x / top) * 100,
+    lpPct: c.taps ? (lp / top) * 100 : undefined,
+    xmtr: x,
+    lpTap: c.taps ? lp : undefined,
+  };
+}
