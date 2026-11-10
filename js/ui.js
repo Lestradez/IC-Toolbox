@@ -12,7 +12,10 @@ const formatters = new Map();
 export function fmt(n, sig = 6) {
   if (!Number.isFinite(n)) return '—';
   const a = Math.abs(n);
-  if (a !== 0 && (a < 1e-4 || a >= 1e9)) return n.toExponential(sig - 1).replace('.', ',');
+  if (a !== 0 && (a < 1e-4 || a >= 1e9)) {
+    // 1.00000e-6 -> 1e-6; 1.01970e-5 -> 1,0197e-5
+    return n.toExponential(sig - 1).replace(/\.?0+e/, 'e').replace('.', ',');
+  }
   if (!formatters.has(sig)) {
     formatters.set(sig, new Intl.NumberFormat('es-ES', { maximumSignificantDigits: sig, useGrouping: false }));
   }

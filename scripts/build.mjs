@@ -16,8 +16,10 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Lo que se publica. Todo lo demás (tests, scripts, docs) se queda fuera. */
+/** Lo que se publica y se precarga para usar offline. Tests, scripts y docs se quedan fuera. */
 const ENTRIES = ['index.html', 'manifest.webmanifest', 'css', 'js', 'icons'];
+/** Se publica pero no se precarga (solo lo usa el diálogo de instalación). */
+const PUBLISH_ONLY = ['screenshots'];
 
 async function walk(rel) {
   const abs = join(ROOT, rel);
@@ -57,6 +59,7 @@ export async function build(out = join(ROOT, '_site')) {
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   for (const e of ENTRIES) await cp(join(ROOT, e), join(out, e), { recursive: true });
+  for (const e of PUBLISH_ONLY) await cp(join(ROOT, e), join(out, e), { recursive: true, force: true }).catch((err) => { if (err.code !== 'ENOENT') throw err; });
 
   let sw = await readFile(join(ROOT, 'sw.js'), 'utf8');
   sw = replaceOnce(sw, "'__CACHE_VERSION__'", JSON.stringify(cacheVersion), 'sw.js');

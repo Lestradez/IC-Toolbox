@@ -50,6 +50,8 @@
 
 * { box-sizing: border-box; }
 
+html { scroll-padding-bottom: 96px; }
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -111,7 +113,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent);
 .results th, .results td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
 .results th { font-size: .8rem; color: var(--muted); font-weight: 600; }
 .results tr:last-child td { border-bottom: 0; }
-.results td.num { font-variant-numeric: tabular-nums; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.results td.num { font-variant-numeric: tabular-nums; }
 .results tr.src { background: var(--accent-soft); font-weight: 600; }
 
 .note, .hint { color: var(--muted); font-size: .85rem; }
@@ -144,12 +146,16 @@ h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: 
 
 /* Resultado */
 .big { margin: 0 0 12px; display: flex; flex-direction: column; }
-.big #o-main { font-size: 1.9rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.big .main { font-size: 1.9rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 .big small { font-size: 1rem; font-weight: 400; color: var(--muted); }
 .big .alt { font-size: .9rem; color: var(--text); }
 .card.result .results { border-radius: 8px; }
+/* Al saltar desde la barra, que la cabecera fija no tape «Resultado». */
+.card.result { scroll-margin-top: calc(env(safe-area-inset-top) + 64px); }
+.card.result:focus { outline: none; }
 .results.kv td:first-child { color: var(--muted); font-size: .85rem; }
 .results.kv td.num { text-align: right; font-size: .9rem; }
+.results.kv td.num span { display: block; white-space: nowrap; }
 .results.kv td { padding: 8px 10px; }
 
 .msgs { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
@@ -219,3 +225,51 @@ details.note summary { cursor: pointer; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* Barra de resultado fija: el valor principal sigue a la vista mientras se editan los datos */
+.result-bar {
+  position: fixed; z-index: 3; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  width: calc(100% - 32px); max-width: 728px; min-height: 56px;
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+  font: inherit; text-align: left; cursor: pointer;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.result-bar .v { flex: 1; min-width: 0; font-size: 1.25rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-bar .go { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.result-bar .dot { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; background: var(--ok); }
+.result-bar[data-level="warn"] .dot { background: var(--warn); }
+.result-bar[data-level="bad"] .dot { background: var(--bad); }
+
+/* Campo con botón ± */
+.signed { display: flex; }
+.signed .sign {
+  flex: 0 0 44px; min-height: 44px; font: inherit; font-size: 1.1rem; cursor: pointer;
+  color: var(--text); background: var(--surface); border: 1px solid var(--border); border-right: 0; border-radius: 8px 0 0 8px;
+}
+.signed input { border-radius: 0 8px 8px 0; min-width: 0; }
+
+/* Aviso breve (copiado, deshacer) */
+.toast {
+  position: fixed; z-index: 4; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 80px);
+  width: max-content; max-width: calc(100% - 32px);
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 12px;
+  background: var(--text); color: var(--bg); box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: .9rem;
+}
+.toast button {
+  font: inherit; font-weight: 600; min-height: 40px; padding: 0 12px; cursor: pointer;
+  border: 0; border-radius: 8px; background: transparent; color: var(--bg); text-decoration: underline;
+}
+
+/* Botón con aspecto de enlace (acciones secundarias) */
+button.link {
+  display: block; margin: 12px auto 0; min-height: 44px; padding: 0 8px; cursor: pointer;
+  font: inherit; font-size: .85rem; color: var(--muted); background: none; border: 0; text-decoration: underline;
+}
+
+/* Filas que se copian al tocarlas */
+.results.tappable tr { cursor: pointer; }
+.results.tappable tr:active td, .results.tappable tr:focus-visible td { background: var(--accent-soft); }
+.results.tappable tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

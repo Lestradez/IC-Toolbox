@@ -6,6 +6,7 @@ import {
 import { PIPES, pipeID, schedules, matchSchedule } from '../../pipes.js';
 import { QUANTITIES, convert, mAToPercent, namurStatus } from '../../units.js';
 import { parseNum, fmt, fmtFixed, $ } from '../../ui.js';
+import { resultCardHTML, bindResultCard, enhanceSigned, toast } from '../../components.js';
 
 const TEMPLATE = `
   <div class="tabs" role="tablist" aria-label="Modo de cálculo">
@@ -36,8 +37,8 @@ const TEMPLATE = `
       </label>
       <label>Tomas de presión
         <select id="o-taps">
-          <option value="flange">Brida (flange taps)</option>
-          <option value="corner">Esquina (corner taps)</option>
+          <option value="flange">Brida</option>
+          <option value="corner">Esquina</option>
           <option value="dd2">D y D/2</option>
         </select>
       </label>
@@ -109,22 +110,22 @@ const TEMPLATE = `
           <span class="combo"><input id="o-p1" type="text" inputmode="decimal" value="10"><select id="o-p1u" data-units="pressure" data-default="bar"></select></span>
         </label>
         <label>Referencia
-          <select id="o-p1ref"><option value="g">Manométrica (+1,01325 bar)</option><option value="a">Absoluta</option></select>
+          <select id="o-p1ref"><option value="g">Manométrica</option><option value="a">Absoluta</option></select>
         </label>
       </div>
       <div class="row">
         <label>Densidad ρ1
-          <select id="o-rhomode"><option value="calc">Calcular con p1, T1, M y Z</option><option value="given">Conocida (tablas, vapor)</option></select>
+          <select id="o-rhomode"><option value="calc">Calcular (p1, T1, M, Z)</option><option value="given">Conocida</option></select>
         </label>
         <label>κ (cp/cv) <input id="o-k" type="text" inputmode="decimal" value="1,3"></label>
       </div>
       <div class="row" id="o-rhoCalcBox">
-        <label>T1 (°C) <input id="o-T" type="text" inputmode="decimal" value="25"></label>
+        <label>T1 (°C) <input id="o-T" type="text" inputmode="decimal" value="25" data-signed></label>
         <label>M (g/mol) <input id="o-M" type="text" inputmode="decimal" value="18,04"></label>
         <label>Z a p1, T1 <input id="o-Z" type="text" inputmode="decimal" value="0,98"></label>
       </div>
       <label id="o-rho1Box">ρ1 a p1, T1 (kg/m³) <input id="o-rho1" type="text" inputmode="decimal" value="5,16"></label>
-      <p class="hint">Aire: M = 28,96, κ = 1,40 · Gas natural: M ≈ 17–20, κ ≈ 1,27–1,31 · Vapor sobrecalentado: κ ≈ 1,3, ρ1 de tablas.
+      <p class="hint">Manométrica: se suma 1,01325 bar. Aire: M = 28,96, κ = 1,40 · Gas natural: M ≈ 17–20, κ ≈ 1,27–1,31 · Vapor sobrecalentado: κ ≈ 1,3, ρ1 de tablas.
       Nm³ y Sm³ solo se calculan con ρ1 calculada (necesitan M).</p>
     </div>
     <label>Viscosidad dinámica (cP) <input id="o-mu" type="text" inputmode="decimal" value="1"></label>
@@ -175,16 +176,7 @@ const TEMPLATE = `
     <label>Corte de bajo caudal (% de Q máx) <input id="o-cut" type="text" inputmode="decimal" value="5"></label>
   </div>
 
-  <div class="card result">
-    <h2>Resultado</h2>
-    <p class="big"><span id="o-main">—</span><span id="o-mainAlt" class="alt"></span></p>
-    <table class="results kv"><tbody id="o-results"></tbody></table>
-    <ul id="o-msgs" class="msgs"></ul>
-    <div class="actions">
-      <button type="button" id="o-copy">Copiar resultado</button>
-      <button type="button" id="o-reset">Valores de ejemplo</button>
-    </div>
-  </div>
+${resultCardHTML('o', '<button type="button" id="o-reset" class="link">Cargar valores de ejemplo</button>')}
   <details class="note">
     <summary>Método y límites</summary>
     <p>Ecuaciones de ISO 5167-1 y ISO 5167-2:2003: C de Reader-Harris/Gallagher (con el término para D &lt; 71,12 mm),
@@ -285,35 +277,15 @@ function dpFromMA(maId, urvPa, outId) {
 // Render
 // ---------------------------------------------------------------------------
 
+let showResult = () => {};
+let pending = {};
+
+/** Guarda el resultado; render() lo pinta al final, junto con el texto para copiar. */
 function setResult(main, alt, rows, msgs) {
-  $('o-main').innerHTML = main;
-  $('o-mainAlt').textContent = alt;
-  const body = $('o-results');
-  body.innerHTML = '';
-  for (const [k, v] of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td></td><td class="num"></td>';
-    tr.children[0].textContent = k;
-    tr.children[1].textContent = v;
-    body.appendChild(tr);
-  }
-  const ul = $('o-msgs');
-  ul.innerHTML = '';
-  for (const [cls, text] of msgs) {
-    const li = document.createElement('li');
-    li.className = cls;
-    li.textContent = text;
-    ul.appendChild(li);
-  }
+  pending = { ...(typeof main === 'string' ? { value: main } : main), alt, rows, msgs };
 }
 
-function unitSpan(value, unit) {
-  const s = document.createElement('span');
-  s.textContent = value;
-  const u = document.createElement('small');
-  u.textContent = ` ${unit}`;
-  return s.outerHTML + u.outerHTML;
-}
+const unitSpan = (value, unit) => ({ value, unit });
 
 function fail(text) {
   setResult('—', '', [], [['bad', text]]);
@@ -516,6 +488,7 @@ function render() {
     const on = b.dataset.mode === mode;
     b.classList.toggle('on', on);
     b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
   });
   view.querySelectorAll('[data-modes]').forEach((el) => showIf(el, el.dataset.modes.split(' ').includes(mode)));
   const fluid = $('o-fluid').value;
@@ -535,6 +508,7 @@ function render() {
   if (mode === 'flow') renderFlow();
   else if (mode === 'size') renderSize();
   else renderRange();
+  showResult({ ...pending, text: lastText });
   save();
 }
 
@@ -569,6 +543,12 @@ function load() {
 // Inicialización
 // ---------------------------------------------------------------------------
 
+/** Pone valores en los campos; el schedule se rellena después del NPS. */
+function applyValues(values) {
+  for (const id of ids) if (id !== 'o-sch' && values[id] !== undefined) $(id).value = values[id];
+  fillSchedules(values['o-sch']);
+}
+
 function fillSchedules(prefer) {
   const sel = $('o-sch');
   const prev = prefer || sel.value || '40 / STD';
@@ -577,20 +557,10 @@ function fillSchedules(prefer) {
   sel.value = matchSchedule($('o-nps').value, prev);
 }
 
-async function copy(btn) {
-  if (!lastText) return;
-  const old = btn.textContent;
-  try {
-    await navigator.clipboard.writeText(lastText);
-    btn.textContent = 'Copiado ✓';
-  } catch {
-    btn.textContent = 'No se pudo copiar';
-  }
-  setTimeout(() => { btn.textContent = old; }, 1500);
-}
-
 export function mount(section) {
   section.innerHTML = TEMPLATE;
+  enhanceSigned(section);
+  showResult = bindResultCard(section, 'o');
   const view = section;
   for (const sel of view.querySelectorAll('select[data-units]')) {
     for (const [k, u] of Object.entries(QUANTITIES[sel.dataset.units].units)) sel.add(new Option(u.label, k));
@@ -605,16 +575,29 @@ export function mount(section) {
   ids = [...view.querySelectorAll('input, select')].map((el) => el.id).filter(Boolean);
   for (const id of ids) defaults[id] = $(id).value;
 
-  view.querySelectorAll('.tabs [data-mode]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; render(); }));
+  const tabs = [...view.querySelectorAll('.tabs [data-mode]')];
+  tabs.forEach((b, i) => {
+    b.addEventListener('click', () => { mode = b.dataset.mode; render(); });
+    b.addEventListener('keydown', (e) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+      const next = tabs[(i + step + tabs.length) % tabs.length];
+      next.focus();
+      next.click();
+    });
+  });
   // 'input' llega antes que 'change': el schedule se ajusta al NPS antes de calcular.
   const onEdit = (e) => { if (e.target.id === 'o-nps') fillSchedules(); render(); };
   view.addEventListener('input', onEdit);
   view.addEventListener('change', onEdit);
-  $('o-copy').addEventListener('click', (e) => copy(e.currentTarget));
   $('o-reset').addEventListener('click', () => {
-    for (const id of ids) if (id !== 'o-sch') $(id).value = defaults[id];
-    fillSchedules(defaults['o-sch']);
+    const before = { mode, values: Object.fromEntries(ids.map((id) => [id, $(id).value])) };
+    applyValues(defaults);
     render();
+    toast('Valores de ejemplo cargados.', {
+      action: 'Deshacer',
+      onAction: () => { mode = before.mode; applyValues(before.values); render(); },
+    });
   });
 
   load();
