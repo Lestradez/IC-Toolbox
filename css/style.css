@@ -129,6 +129,9 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent);
 
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px); color: var(--muted); font-size: .8rem; max-width: 760px; width: 100%; margin: 0 auto; }
 .foot a { color: inherit; }
+.foot2 { padding-top: 0; }
+.foot2 a, .foot2 .stats { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+.foot2 .stats input { width: 20px; height: 20px; margin: 0; }
 
 /* El atributo hidden debe ganar a display:flex/grid de las clases */
 [hidden] { display: none !important; }

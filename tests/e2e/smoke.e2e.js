@@ -262,3 +262,22 @@ test('RTD y termopares: valores de tabla en los dos sentidos', async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('«Reportar un problema» lleva la herramienta y la versión; sin código no hay envíos', async () => {
+  const { context, page, errors } = await newPage();
+  const requests = [];
+  page.on('request', (r) => { if (r.url().includes('goatcounter')) requests.push(r.url()); });
+  await page.goto(base + '#/orifice');
+  await visibleView(page, 'orifice');
+  const url = new URL(await page.getAttribute('#report', 'href'));
+  assert.equal(url.pathname, '/Lestradez/IC-Toolbox/issues/new');
+  assert.equal(url.searchParams.get('title'), '[Placa orificio] ');
+  assert.match(url.searchParams.get('body'), /Herramienta: Placa orificio \(#\/orifice\)/);
+  assert.match(url.searchParams.get('body'), /Versión: /);
+  await page.goto(base + '#/');
+  assert.match(new URL(await page.getAttribute('#report', 'href')).searchParams.get('title'), /Inicio/);
+  assert.deepEqual(requests, []);
+  assert.equal(await page.isHidden('#stats-row'), true, 'sin código GoatCounter no se ofrece el interruptor');
+  assert.deepEqual(errors, []);
+  await context.close();
+});

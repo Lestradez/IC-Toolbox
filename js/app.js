@@ -2,10 +2,43 @@
 // Cada herramienta se carga (import dinámico) la primera vez que se abre.
 import { $, loadState, saveState } from './ui.js';
 import { TOOLS, CATEGORIES, toolById, searchTools } from './tools/registry.js';
+import { REPO, GOATCOUNTER_CODE } from './config.js';
+import { createAnalytics, watchErrors } from './analytics.js';
+import { reportUrl } from './report.js';
 
 // scripts/build.mjs sustituye el marcador por «versión · hash» al publicar.
 export const APP_VERSION = '__APP_VERSION__';
-document.getElementById('version').textContent = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
+const VERSION_TEXT = APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION;
+document.getElementById('version').textContent = VERSION_TEXT;
+
+// ---------------------------------------------------------------------------
+// Estadísticas anónimas y reportes. Solo se envían en el sitio publicado (no en
+// localhost) y si hay código de GoatCounter en js/config.js.
+// ---------------------------------------------------------------------------
+
+let current = null; // id de la vista abierta ('home' o id de herramienta)
+const published = !['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
+const analytics = createAnalytics({ code: published ? GOATCOUNTER_CODE : '', version: VERSION_TEXT });
+watchErrors(analytics, () => current || 'home');
+window.addEventListener('online', () => analytics.flush());
+analytics.flush();
+
+if (published && GOATCOUNTER_CODE) {
+  $('stats-row').hidden = false;
+  $('stats').checked = loadState('analytics') !== false;
+  $('stats').addEventListener('change', () => saveState('analytics', $('stats').checked));
+}
+
+function updateReportLink(tool) {
+  $('report').href = reportUrl({
+    repo: REPO, tool: tool ? tool.id : '', toolTitle: tool ? tool.title : '',
+    version: VERSION_TEXT, userAgent: navigator.userAgent, online: navigator.onLine,
+  });
+}
+$('report').addEventListener('click', () => {
+  updateReportLink(toolById(current));
+  analytics.event(`report/${current || 'home'}`);
+});
 
 // ---------------------------------------------------------------------------
 // Inicio: buscador, recientes y categorías
@@ -78,7 +111,6 @@ $('search').addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 const mounted = new Map(); // id -> Promise<HTMLElement>
-let current = null;
 let cameFromHome = false;
 
 function mountTool(tool) {
@@ -113,6 +145,8 @@ async function route() {
   $('back').hidden = !tool;
   $('brand').hidden = !!tool;
   $('title').hidden = !tool;
+  updateReportLink(tool);
+  analytics.pageview(tool ? `/${tool.id}` : '/', tool ? tool.title : 'Inicio');
 
   if (!tool) {
     document.title = 'I&C Toolbox';
