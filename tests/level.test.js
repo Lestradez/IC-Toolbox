@@ -111,3 +111,78 @@ test('unidades de densidad', () => {
   assert.throws(() => densityToKgM3(1, 'x'));
   for (const c of Object.values(CONFIGS)) assert.ok(c.label && c.hint);
 });
+
+import { tankRange } from '../js/level.js';
+import { tankDiagram } from '../js/tools/level/diagram.js';
+
+test('tanque de 9 m con la toma a 1 m y el transmisor en la brida: 0-8 m, PLC 1-9 o 0-8 + 1', () => {
+  const r = tankRange({ config: 'open', top: 9, tap: 1, rho: 900 });
+  close(r.lrv, 0);
+  close(r.urv, G0 * 900 * 8);
+  close(r.column.lrv, 0);
+  close(r.column.urv, 8);
+  assert.deepEqual(r.plc, { lo: 1, hi: 9, span: 8, offset: 1 });
+  close(r.height, 8);
+  close(r.deadZone.height, 1);
+  close(r.deadZone.pct, 100 / 9);
+  close(r.tapPct, 100 / 9);
+  close(r.xmtrPct, 100 / 9);
+  assert.equal(r.kind, 'none');
+  close(r.at(0).level, 1);
+  close(r.at(100).level, 9);
+});
+
+test('transmisor por debajo de la toma: supresión, y su % de altura', () => {
+  // transmisor a 0,4 m del suelo con la toma a 1 m: la línea llena de líquido suma 0,6 m de columna
+  const r = tankRange({ config: 'open', top: 9, tap: 1, xmtr: 0.4, rho: 900 });
+  close(r.column.lrv, 0.6);
+  close(r.column.urv, 8.6);
+  close(r.xmtrPct, (0.4 / 9) * 100);
+  assert.equal(r.kind, 'suppressed');
+});
+
+test('pierna húmeda con las cotas del tanque', () => {
+  // toma LP a 9,5 m, toma HP a 1 m, transmisor en la brida HP: pierna de 8,5 m de agua
+  const r = tankRange({ config: 'wet', top: 9, tap: 1, lpTap: 9.5, rho: 900, rhoRef: 1000 });
+  close(r.column.lrv, -8.5 * (1000 / 900));
+  close(r.lrv, -G0 * 1000 * 8.5);
+  close(r.span, G0 * 900 * 8);
+  close(r.lpPct, (9.5 / 9) * 100);
+  assert.equal(r.kind, 'elevated');
+  // sin cota LP se usa la superior
+  const d = tankRange({ config: 'wet', top: 9, tap: 1, rho: 900, rhoRef: 1000 });
+  close(d.lrv, -G0 * 1000 * 8);
+  // y la cota del transmisor desplaza la pierna y la línea HP a la vez
+  const x = tankRange({ config: 'wet', top: 9, tap: 1, xmtr: 0, rho: 900, rhoRef: 1000 });
+  close(x.lrv, G0 * (900 * 1 - 1000 * 9));
+});
+
+test('dos sellos: la cota del transmisor no cambia el resultado', () => {
+  const a = tankRange({ config: 'seals', top: 9, tap: 1, rho: 900, rhoFill: 960 });
+  const b = tankRange({ config: 'seals', top: 9, tap: 1, xmtr: 0, rho: 900, rhoFill: 960 });
+  close(a.lrv, b.lrv);
+  close(a.lrv, -G0 * 960 * 8);
+});
+
+test('errores de las cotas del tanque', () => {
+  const ok = { config: 'open', top: 9, tap: 1, rho: 900 };
+  assert.ok(tankRange(ok));
+  assert.throws(() => tankRange({ ...ok, top: 0 }), /cota superior/);
+  assert.throws(() => tankRange({ ...ok, tap: -1 }), /referencia/);
+  assert.throws(() => tankRange({ ...ok, tap: 9 }), /por debajo de la cota superior/);
+  assert.throws(() => tankRange({ ...ok, xmtr: Infinity }), /transmisor/);
+  assert.throws(() => tankRange({ ...ok, config: 'wet', rhoRef: 1000, lpTap: 5 }), /toma LP/);
+  assert.throws(() => tankRange({ ...ok, config: 'zzz' }), /desconocido/);
+});
+
+test('el esquema del tanque pinta cotas y el fondo cónico, sin NaN', () => {
+  const labels = { top: 'Sup. 9 m', tap: 'HP 1 m', bottom: '0 (ref.)', xmtr: 'TX 1 m', lp: '9 m' };
+  const open = tankDiagram({ top: 9, tap: 1, xmtr: 1, labels });
+  assert.match(open, /^<svg /);
+  assert.ok(open.includes('Sup. 9 m') && open.includes('zona muerta') && open.includes('TX 1 m'));
+  assert.ok(!open.includes('NaN') && !open.includes('LP'));
+  const cone = tankDiagram({ top: 9, tap: 1, xmtr: 0.2, lpTap: 9.5, cone: true, lpKind: 'wet', labels });
+  assert.ok(cone.includes('LP 9 m') && cone.includes('class="line lp wet"') && !cone.includes('NaN'));
+  assert.notEqual(cone, tankDiagram({ top: 9, tap: 1, xmtr: 0.2, lpTap: 9.5, labels }));
+  assert.ok(tankDiagram({ top: 9, tap: 1, xmtr: 50, labels: { ...labels, top: '<x>' } }).includes('&lt;x&gt;'));
+});
