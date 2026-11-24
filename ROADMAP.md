@@ -99,12 +99,12 @@ En ese commit pasan **143 tests de cálculo** (`npm test`) y **15 tests de humo*
 - [x] **1.18 Nivel de burbuja** (`js/sensors.js`, `js/tools/bubble/`, categoría nueva «Campo»):
       inclinómetro con DeviceOrientation, modos plano y vertical (plomada), grados / % / mm/m,
       cero, congelar, aviso si no hay sensores (escritorio). Sin dependencias, funciona offline.
-      — este PR. `tests/sensors.test.js` y e2e «nivel de burbuja». *Probado con eventos
+      — PR #20. `tests/sensors.test.js` y e2e «nivel de burbuja». *Probado con eventos
       simulados en Chromium; falta verlo con sensores reales (Android e iPhone).*
 - [x] **1.19 Brújula** (`js/sensors.js`, `js/tools/compass/`): rumbo magnético con
       `deviceorientationabsolute` (Android) o `webkitCompassHeading` (iOS, con permiso tras un
       toque), declinación opcional para norte verdadero y aviso permanente de interferencia
-      (motores, tableros, estructuras metálicas). — este PR. `tests/sensors.test.js` y e2e
+      (motores, tableros, estructuras metálicas). — PR #20. `tests/sensors.test.js` y e2e
       «brújula». *Probada con eventos simulados; falta verla con sensores reales.*
 
 ---
