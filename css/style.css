@@ -437,3 +437,26 @@ button.link {
 .cs-r-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; break-inside: avoid; }
 .cs-r-sign div { border-top: 1px solid #000; padding-top: 4px; text-align: center; }
 .cs-r-foot { margin-top: 16px; color: #666; font-size: 7.5pt; }
+
+/* Nivel de burbuja y brújula */
+.vial-card, .compass-card { text-align: center; }
+.vial { position: relative; width: min(100%, 300px); aspect-ratio: 1; margin: 0 auto 8px; border-radius: 50%; background: var(--bg); border: 3px solid var(--border); }
+.vial[data-level="ok"] { border-color: var(--ok); }
+.vial-ring { position: absolute; inset: 41%; border-radius: 50%; border: 2px solid var(--muted); }
+.vial-cross { position: absolute; inset: 0; background:
+  linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat,
+  linear-gradient(var(--border), var(--border)) center / 100% 1px no-repeat; }
+.vial-bubble { position: absolute; left: 50%; top: 50%; width: 16%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: var(--accent); opacity: .85; }
+.vial[data-level="ok"] .vial-bubble { background: var(--ok); }
+.vial-verdict { margin: 0 0 8px; font-weight: 600; min-height: 1.4em; }
+.vial-verdict[data-level="ok"] { color: var(--ok); }
+.warn-box { margin: 0 0 16px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--warn); background: var(--surface); font-size: .9rem; }
+.compass { width: min(100%, 300px); margin: 0 auto 8px; }
+.compass svg { width: 100%; height: auto; display: block; }
+#k-dial { transition: transform .12s linear; }
+@media (prefers-reduced-motion: reduce) { #k-dial { transition: none; } }
+.c-ring { fill: var(--bg); stroke: var(--border); stroke-width: 2; }
+.c-ticks line { stroke: var(--muted); stroke-width: 1.5; }
+.c-n { fill: var(--bad); font-weight: 700; font-size: 20px; }
+.c-l { fill: var(--text); font-weight: 600; font-size: 16px; }
+.c-lubber { fill: var(--accent); }

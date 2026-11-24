@@ -2,7 +2,7 @@
 
 Estado de partida: **v0.3.0**, `main` en `7411823` (PR #18), 11 de noviembre de 2026.
 En ese commit pasan **143 tests de cálculo** (`npm test`) y **15 tests de humo** en Chromium
-(`npm run test:e2e`).
+(`npm run test:e2e`). Con el nivel de burbuja y la brújula (1.18 y 1.19): **155** y **17**.
 
 ## Cómo se usa este archivo
 
@@ -96,6 +96,16 @@ En ese commit pasan **143 tests de cálculo** (`npm test`) y **15 tests de humo*
       as found / as left, subida y bajada, error % span, histéresis, U del patrón opcional con
       TUR, guardado local, exportación a Excel propio (sin dependencias) y PDF por impresión.
       — PR #17. `tests/calsheet.test.js`, `tests/xlsx.test.js` y e2e «planilla de calibración».
+- [x] **1.18 Nivel de burbuja** (`js/sensors.js`, `js/tools/bubble/`, categoría nueva «Campo»):
+      inclinómetro con DeviceOrientation, modos plano y vertical (plomada), grados / % / mm/m,
+      cero, congelar, aviso si no hay sensores (escritorio). Sin dependencias, funciona offline.
+      — este PR. `tests/sensors.test.js` y e2e «nivel de burbuja». *Probado con eventos
+      simulados en Chromium; falta verlo con sensores reales (Android e iPhone).*
+- [x] **1.19 Brújula** (`js/sensors.js`, `js/tools/compass/`): rumbo magnético con
+      `deviceorientationabsolute` (Android) o `webkitCompassHeading` (iOS, con permiso tras un
+      toque), declinación opcional para norte verdadero y aviso permanente de interferencia
+      (motores, tableros, estructuras metálicas). — este PR. `tests/sensors.test.js` y e2e
+      «brújula». *Probada con eventos simulados; falta verla con sensores reales.*
 
 ---
 
@@ -254,6 +264,13 @@ En ese commit pasan **143 tests de cálculo** (`npm test`) y **15 tests de humo*
       - Verificación: la app abre a pantalla completa, sin barra de URL, y funciona sin red.
 - [ ] **3.4 Versión pro privada** (usuarios, base de datos): repo privado que use este núcleo
       público como dependencia, no como fork (un fork de un repo público no puede ser privado).
+- [ ] **3.5 Medición de distancias por AR** *(prueba futura / experimental)*: WebXR
+      (`immersive-ar` con hit-test) solo funciona en Android con Chrome; iOS no soporta WebXR,
+      así que no sería una herramienta para todos. Omar pidió no hacerlo ahora: esto es solo el
+      registro. Antes de codificar, probar si la precisión (cm a metros) sirve para algo en planta.
+      - Archivos: por decidir (`js/tools/ar/`).
+      - Verificación: prueba manual en un Android real contra una cinta métrica; no se puede
+        automatizar en CI.
 
 ### Descartado
 
