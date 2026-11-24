@@ -7,7 +7,7 @@
 // index.html ni sw.js.
 
 /** Orden en que se muestran las categorías en el inicio. */
-export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Nivel', 'Control', 'Fluidos', 'Referencias'];
+export const CATEGORIES = ['Conversiones', 'Señales', 'Sensores', 'Calibración', 'Caudal', 'Nivel', 'Control', 'Fluidos', 'Campo', 'Referencias'];
 
 /**
  * @typedef {object} Tool
@@ -102,6 +102,24 @@ export const TOOLS = [
     keywords: 'iso 5167 delta p dp diferencial beta diámetro crudo bsw agua gas vapor reader-harris gallagher brida schedule nps',
     load: () => import('./orifice/view.js'),
     help: () => import('./orifice/help.js'),
+  },
+  {
+    id: 'bubble',
+    title: 'Nivel de burbuja',
+    desc: 'Inclinómetro del teléfono: grados, % y mm/m; plano o plomada (necesita sensores)',
+    category: 'Campo',
+    keywords: 'nivel de burbuja inclinómetro pendiente plomada nivelar horizontal vertical inclinación grados porcentaje mm/m línea de impulso bandeja soporte acelerómetro sensor teléfono',
+    load: () => import('./bubble/view.js'),
+    help: () => import('./bubble/help.js'),
+  },
+  {
+    id: 'compass',
+    title: 'Brújula',
+    desc: 'Rumbo magnético (y verdadero con declinación); avisa de interferencias (necesita sensores)',
+    category: 'Campo',
+    keywords: 'brújula compás rumbo norte magnético verdadero declinación orientación azimut cardinal este oeste sensor magnetómetro teléfono',
+    load: () => import('./compass/view.js'),
+    help: () => import('./compass/help.js'),
   },
 ];
 

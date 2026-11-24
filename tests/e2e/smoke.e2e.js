@@ -24,6 +24,8 @@ const ROUTES = [
   { hash: '#/level', view: 'level' },
   { hash: '#/pid', view: 'pid' },
   { hash: '#/densities', view: 'densities' },
+  { hash: '#/bubble', view: 'bubble' },
+  { hash: '#/compass', view: 'compass' },
 ];
 
 let dir;
@@ -385,6 +387,65 @@ test('RTD y termopares: valores de tabla en los dos sentidos', async () => {
   await page.fill('#t-tE', '41,276');
   assert.match(await page.inputValue('#t-tT'), /^(999,99|1000,0[01])$/);
   assert.match(await page.textContent('#t-table'), /mA|20,00/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+// Los sensores se simulan disparando eventos de orientación desde la página.
+const fire = (page, type, init) => page.evaluate(([t, i]) => {
+  const e = new DeviceOrientationEvent(t, i);
+  window.dispatchEvent(e);
+}, [type, init]);
+
+test('nivel de burbuja: lectura, cero y aviso sin sensores', async () => {
+  const { context, page, errors } = await newPage();
+  await context.grantPermissions(['accelerometer', 'gyroscope', 'magnetometer']);
+  await page.goto(`${base}#/bubble`);
+  await page.waitForSelector('[data-view="bubble"]:not([hidden]) #b-start');
+  await page.click('#b-start');
+  await page.waitForFunction(() => /Leyendo/.test(document.getElementById('b-status').textContent));
+  // Teléfono acostado con el borde superior 5° arriba y el derecho 3° arriba (gamma = −3).
+  for (let i = 0; i < 12; i++) await fire(page, 'deviceorientation', { alpha: 0, beta: 5, gamma: -3 });
+  await page.waitForFunction(() => /^5,8°$/.test(document.getElementById('b-main').textContent));
+  assert.match(await page.textContent('#b-rows'), /\+5,0°/);
+  assert.match(await page.textContent('#b-rows'), /\+3,0°/);
+  assert.equal(await page.getAttribute('#b-vial', 'data-level'), 'off');
+  // Poner a cero: queda nivelado y se muestra «Quitar cero».
+  await page.click('#b-zero');
+  await page.waitForFunction(() => document.getElementById('b-vial').dataset.level === 'ok');
+  assert.match(await page.textContent('#b-main'), /^0,0°$/);
+  assert.equal(await page.isVisible('#b-unzero'), true);
+  await page.click('#b-unzero');
+  await page.waitForFunction(() => /^5,8°$/.test(document.getElementById('b-main').textContent));
+  // Sin eventos reales (como un ordenador): aviso claro.
+  await page.click('#b-start'); // detener
+  await page.reload();
+  await page.waitForSelector('[data-view="bubble"]:not([hidden]) #b-start');
+  await page.click('#b-start');
+  await page.waitForFunction(() => /ordenador/.test(document.getElementById('b-status').textContent), null, { timeout: 5000 });
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('brújula: rumbo magnético, declinación, aviso de interferencia y sin sensores', async () => {
+  const { context, page, errors } = await newPage();
+  await context.grantPermissions(['accelerometer', 'gyroscope', 'magnetometer']);
+  await page.goto(`${base}#/compass`);
+  await page.waitForSelector('[data-view="compass"]:not([hidden]) #k-start');
+  assert.match(await page.textContent('[data-view="compass"]'), /interferencia/i);
+  assert.match(await page.textContent('[data-view="compass"]'), /magnético, no geográfico/);
+  await page.click('#k-start');
+  await page.waitForFunction(() => /Esperando datos/.test(document.getElementById('k-status').textContent));
+  // Un alpha relativo no apunta al norte: no debe mostrar rumbo.
+  await fire(page, 'deviceorientation', { alpha: 90, beta: 0, gamma: 0, absolute: false });
+  assert.equal(await page.textContent('#k-main'), '—');
+  // Absoluto: alpha 90° con el teléfono acostado = rumbo 270° (O).
+  for (let i = 0; i < 3; i++) await fire(page, 'deviceorientationabsolute', { alpha: 90, beta: 0, gamma: 0, absolute: true });
+  await page.waitForFunction(() => /^270° O/.test(document.getElementById('k-main').textContent));
+  assert.doesNotMatch(await page.textContent('#k-rows'), /verdadero/);
+  await page.fill('#k-decl', '-8');
+  await page.waitForFunction(() => /verdadero/.test(document.getElementById('k-rows').textContent));
+  assert.match(await page.textContent('#k-rows'), /262,0°/);
   assert.deepEqual(errors, []);
   await context.close();
 });

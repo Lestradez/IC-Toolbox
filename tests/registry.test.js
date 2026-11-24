@@ -31,5 +31,9 @@ test('búsqueda sin acentos ni mayúsculas y con varias palabras', () => {
   assert.deepEqual(ids('planilla as found'), ['calsheet']);
   assert.deepEqual(ids('pierna humeda'), ['level']);
   assert.deepEqual(ids('supresion cero'), ['level']);
+  assert.deepEqual(ids('brujula'), ['compass']);
+  assert.deepEqual(ids('declinacion'), ['compass']);
+  assert.deepEqual(ids('plomada'), ['bubble']);
+  assert.deepEqual(ids('inclinometro'), ['bubble']);
   assert.deepEqual(ids('xyz'), []);
 });

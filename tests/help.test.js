@@ -93,6 +93,14 @@ test('los ejemplos resueltos coinciden con el cálculo', async () => {
   const r15 = rho15FromApi(35, 'crude');
   near(r15, 849.4, 0.05); near(petroleumDensity('crude', r15, 40).rho, 831.2, 0.05);
 
+  const { readInclination, upVector, slope, trueHeading, compassHeading } = await import('../js/sensors.js');
+  assert.match(await ex('bubble'), /1:12 = 4,76° = 8,3 % = 83 mm\/m/);
+  const ang = Math.atan(1 / 12) * 180 / Math.PI;
+  near(ang, 4.76, 5e-3); near(slope(ang).pct, 8.3, 0.05); near(slope(ang).mmPerM, 83, 0.5);
+  near(readInclination(upVector(ang, 0), 'flat').b, ang, 1e-9);
+  assert.match(await ex('compass'), /82° \(E, norte verdadero\); 90° magnético/);
+  near(compassHeading(270, 0, 0), 90, 1e-9); near(trueHeading(90, -8), 82, 1e-9);
+
   assert.match(await ex('pid'), /Kc = 1,5, Ti = 45 s/);
   const m = { kind: 'self', K: 1.5, tau: 45, theta: 10 };
   const c = tune('simc', 'PI', m, defaultLambda('simc', m));
