@@ -9,17 +9,15 @@ En ese commit pasan **143 tests de cálculo** (`npm test`) y **15 tests de humo*
 - **Fase 1 `[x]`**: lo que ya está en `main` y funciona. Es el registro del estado base; no se toca.
 - **Fase 2 `[ ]`**: cola secuencial. Cuando Omar pide avanzar, Claude toma **solo la primera `[ ]`
   de la Fase 2**, la implementa, corre su verificación y, si pasa, la marca `[x]` **en el mismo PR**
-  que la implementa. Un ítem = un PR.
+  que la implementa.
 - **Bloqueadas**: necesitan un dato o una decisión de Omar. No están en la cola para que no la
   frenen. Cuando llega el dato, el ítem pasa a la Fase 2 en el lugar que Omar diga.
 - **Fase 3 (diferido)**: decidido para más adelante; no se trabaja hasta que Omar lo reactive.
 - **Pedidos nuevos**: primero se añaden aquí como `[ ]` en su sección (en el mismo PR o en uno
   previo) y solo después se escribe código.
-- **Verificación base de cualquier ítem** (además de la propia): `npm test` y `npm run test:e2e`
-  en verde, que es lo que corre el check `test` del PR. Toda herramienta nueva lleva su `help.js`
-  y su ejemplo resuelto en `tests/help.test.js` (lo exige ese test).
-- Para correr el e2e en local sin `npm ci`:
-  `ln -s "$(npm root -g)/playwright" node_modules/playwright && npm run test:e2e`.
+- **Protocolo de trabajo** (un ítem = un PR, verificación base, e2e en local, ayuda obligatoria por
+  herramienta, formato de commits y PR): está en `AGENTS.md`. Cada ítem trae su propia
+  **Verificación**, que se suma a la base.
 - **IDs**: cada ítem tiene un número fijo (`1.4`, `2.3`, `B2`, `3.1`) para nombrarlo en comentarios
   y PRs. No se renumera: un ítem nuevo toma el siguiente número libre de su sección.
 - **Comentarios**: sobre el artefacto «Roadmap I&C Toolbox» (botón «Comentar» en cada ítem) o en el
